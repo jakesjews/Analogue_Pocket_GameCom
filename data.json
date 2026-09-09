@@ -1,6 +1,56 @@
 {
-    "data": {
-        "magic": "APF_VER_1",
-        "data_slots": []
-    }
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "id": 0,
+        "name": "Cartridge 1",
+        "required": true,
+        "parameters": "0xC9",
+        "extensions": [
+          "tgc",
+          "bin"
+        ],
+        "address": "0x00000000",
+        "size_maximum": 2097152
+      },
+      {
+        "id": 1,
+        "name": "External BIOS",
+        "required": true,
+        "parameters": "0x48",
+        "filename": "boot.rom",
+        "extensions": [
+          "rom",
+          "bin",
+          "tgc"
+        ],
+        "address": "0x10000000",
+        "size_exact": 262144
+      },
+      {
+        "id": 2,
+        "name": "Cartridge 2",
+        "required": false,
+        "parameters": "0x49",
+        "extensions": [
+          "tgc",
+          "bin"
+        ],
+        "address": "0x20000000",
+        "size_maximum": 2097152
+      },
+      {
+        "id": 3,
+        "name": "Console Save",
+        "required": false,
+        "parameters": "0x00",
+        "nonvolatile": true,
+        "filename": "gamecom.sav",
+        "address": "0x30000000",
+        "size_exact": 8192,
+        "size_maximum": 8192
+      }
+    ]
+  }
 }

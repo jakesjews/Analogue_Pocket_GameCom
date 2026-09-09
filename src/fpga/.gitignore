@@ -1,28 +1,34 @@
-*/db/
-*/incremental_db/
-*/simulation/
-*/greybox_tmp/
-incremental_db/
-db/
-PLLJ_PLLSPE_INFO.txt
-c5_pin_model_dump.txt
-cr_ie_info.json
-*.pin
-*.pof
-*.ptf.*
-*.qar
-*.qarlog
+# Quartus compilation databases and generated output
+/db/
+/incremental_db/
+/output_files/
+**/db/
+**/incremental_db/
+**/simulation/
+**/greybox_tmp/
+
+# Per-user project state, reports, programming files and archives
 *.qws
 *.rpt
-*.smsg
-*.sof
-*.sopc_builder
 *.summary
-*.txt
-*.bak
-*.cmp
+*.smsg
 *.done
-*.xml
+*.jdi
+*.pin
+*.sof
+*.rbf
+*.rbf_r
+*.pof
+*.qar
+*.qarlog
+*.qdb
+*.ptf.*
+*.sopc_builder
+*.bak
 *.sld
 *.cdf
 
+# Quartus diagnostic dumps; keep source/IP .txt and .xml files visible
+PLLJ_PLLSPE_INFO.txt
+c5_pin_model_dump.txt
+cr_ie_info.json

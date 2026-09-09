@@ -1,3 +1,4 @@
-Example Core - Core Template
-
-This is a template for a core containing all of the core definition JSON files and FPGA starter code.
+Game.com for Analogue Pocket
+Original FPGA core: Jamie Blanks
+L + D-pad: move touch cursor; R: touch.
+Start: Pause. Select: Game.com Menu.

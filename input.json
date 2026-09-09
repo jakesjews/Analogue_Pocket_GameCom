@@ -1,6 +1,52 @@
 {
-    "input": {
-        "magic": "APF_VER_1",
-        "controllers": []
-    }
+  "input": {
+    "magic": "APF_VER_1",
+    "controllers": [
+      {
+        "type": "default",
+        "mappings": [
+          {
+            "id": 0,
+            "name": "A / L+Touch",
+            "key": "pad_btn_a"
+          },
+          {
+            "id": 1,
+            "name": "B",
+            "key": "pad_btn_b"
+          },
+          {
+            "id": 2,
+            "name": "C",
+            "key": "pad_btn_x"
+          },
+          {
+            "id": 3,
+            "name": "D",
+            "key": "pad_btn_y"
+          },
+          {
+            "id": 4,
+            "name": "Hold: move cursor",
+            "key": "pad_trig_l"
+          },
+          {
+            "id": 5,
+            "name": "Touch screen",
+            "key": "pad_trig_r"
+          },
+          {
+            "id": 6,
+            "name": "Pause",
+            "key": "pad_btn_start"
+          },
+          {
+            "id": 7,
+            "name": "Menu",
+            "key": "pad_btn_select"
+          }
+        ]
+      }
+    ]
+  }
 }

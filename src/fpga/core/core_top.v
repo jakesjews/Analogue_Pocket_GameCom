@@ -231,7 +231,7 @@ assign port_ir_tx = 0;
 assign port_ir_rx_disable = 1;
 
 // bridge endianness
-assign bridge_endian_little = 0;
+assign bridge_endian_little = 1;
 
 // cart is unused, so set all level translators accordingly
 // directions are 0:IN, 1:OUT
@@ -261,18 +261,6 @@ assign port_tran_sd = 1'bz;
 assign port_tran_sd_dir = 1'b0;     // SD is input and not used
 
 // tie off the rest of the pins we are not using
-assign cram0_a = 'h0;
-assign cram0_dq = {16{1'bZ}};
-assign cram0_clk = 0;
-assign cram0_adv_n = 1;
-assign cram0_cre = 0;
-assign cram0_ce0_n = 1;
-assign cram0_ce1_n = 1;
-assign cram0_oe_n = 1;
-assign cram0_we_n = 1;
-assign cram0_ub_n = 1;
-assign cram0_lb_n = 1;
-
 assign cram1_a = 'h0;
 assign cram1_dq = {16{1'bZ}};
 assign cram1_clk = 0;
@@ -295,12 +283,6 @@ assign dram_ras_n = 'h1;
 assign dram_cas_n = 'h1;
 assign dram_we_n = 'h1;
 
-assign sram_a = 'h0;
-assign sram_dq = {16{1'bZ}};
-assign sram_oe_n  = 1;
-assign sram_we_n  = 1;
-assign sram_ub_n  = 1;
-assign sram_lb_n  = 1;
 
 assign dbg_tx = 1'bZ;
 assign user1 = 1'bZ;
@@ -311,22 +293,10 @@ assign vpll_feed = 1'bZ;
 // for bridge write data, we just broadcast it to all bus devices
 // for bridge read data, we have to mux it
 // add your own devices here
-always @(*) begin
-    casex(bridge_addr)
-    default: begin
-        bridge_rd_data <= 0;
-    end
-    32'h10xxxxxx: begin
-        // example
-        // bridge_rd_data <= example_device_data;
-        bridge_rd_data <= 0;
-    end
-    32'hF8xxxxxx: begin
-        bridge_rd_data <= cmd_bridge_rd_data;
-    end
-    endcase
+wire [31:0] game_bridge_rd_data;
+always @* begin
+    bridge_rd_data = bridge_addr[31:24] == 8'hf8 ? cmd_bridge_rd_data : game_bridge_rd_data;
 end
-
 
 //
 // host/target command handler
@@ -337,7 +307,7 @@ end
 // bridge host commands
 // synchronous to clk_74a
     wire            status_boot_done = pll_core_locked_s; 
-    wire            status_setup_done = pll_core_locked_s; // rising edge triggers a target command
+    wire            status_setup_done = memory_setup_done; // rising edge triggers a target command
     wire            status_running = reset_n; // we are running as soon as reset_n goes high
 
     wire            dataslot_requestread;
@@ -348,8 +318,10 @@ end
     wire            dataslot_requestwrite;
     wire    [15:0]  dataslot_requestwrite_id;
     wire    [31:0]  dataslot_requestwrite_size;
-    wire            dataslot_requestwrite_ack = 1;
-    wire            dataslot_requestwrite_ok = 1;
+    // ID and size are registered with the request. Acknowledge only once
+    // they are valid, so slot validation never uses the previous request.
+    wire            dataslot_requestwrite_ack = dataslot_requestwrite;
+    wire            dataslot_requestwrite_ok;
 
     wire            dataslot_update;
     wire    [15:0]  dataslot_update_id;
@@ -384,19 +356,19 @@ end
 // bridge target commands
 // synchronous to clk_74a
 
-    reg             target_dataslot_read;       
-    reg             target_dataslot_write;
-    reg             target_dataslot_getfile;    // require additional param/resp structs to be mapped
-    reg             target_dataslot_openfile;   // require additional param/resp structs to be mapped
+    wire            target_dataslot_read = 0;       
+    wire            target_dataslot_write = 0;
+    wire            target_dataslot_getfile = 0;    // require additional param/resp structs to be mapped
+    wire            target_dataslot_openfile = 0;   // require additional param/resp structs to be mapped
     
     wire            target_dataslot_ack;        
     wire            target_dataslot_done;
     wire    [2:0]   target_dataslot_err;
 
-    reg     [15:0]  target_dataslot_id;
-    reg     [31:0]  target_dataslot_slotoffset;
-    reg     [31:0]  target_dataslot_bridgeaddr;
-    reg     [31:0]  target_dataslot_length;
+    wire [15:0] target_dataslot_id = 0;
+    wire [31:0] target_dataslot_slotoffset = 0;
+    wire [31:0] target_dataslot_bridgeaddr = 0;
+    wire [31:0] target_dataslot_length = 0;
     
     wire    [31:0]  target_buffer_param_struct; // to be mapped/implemented when using some Target commands
     wire    [31:0]  target_buffer_resp_struct;  // to be mapped/implemented when using some Target commands
@@ -496,180 +468,52 @@ core_bridge_cmd icb (
 
 
 
-// video generation
-// ~12,288,000 hz pixel clock
-//
-// we want our video mode of 320x240 @ 60hz, this results in 204800 clocks per frame
-// we need to add hblank and vblank times to this, so there will be a nondisplay area. 
-// it can be thought of as a border around the visible area.
-// to make numbers simple, we can have 400 total clocks per line, and 320 visible.
-// dividing 204800 by 400 results in 512 total lines per frame, and 240 visible.
-// this pixel clock is fairly high for the relatively low resolution, but that's fine.
-// PLL output has a minimum output frequency anyway.
 
+// Unsupported commands are explicitly terminated, never left floating.
+assign savestate_supported = 1;
+assign savestate_addr = 32'h50000000;
+assign savestate_size = 26912;
+assign savestate_maxloadsize = 26912;
+assign target_buffer_param_struct = 0;
+assign target_buffer_resp_struct = 0;
+// Slot index 3 is console-wide NVRAM. Tell APF to save exactly 8192 bytes,
+// including on first boot when no save file was present.
+assign datatable_addr = 3 * 2 + 1;
+assign datatable_wren = reset_n;
+assign datatable_data = 8192;
 
-assign video_rgb_clock = clk_core_12288;
-assign video_rgb_clock_90 = clk_core_12288_90deg;
-assign video_rgb = vidout_rgb;
-assign video_de = vidout_de;
-assign video_skip = vidout_skip;
-assign video_vs = vidout_vs;
-assign video_hs = vidout_hs;
-
-    localparam  VID_V_BPORCH = 'd10;
-    localparam  VID_V_ACTIVE = 'd240;
-    localparam  VID_V_TOTAL = 'd512;
-    localparam  VID_H_BPORCH = 'd10;
-    localparam  VID_H_ACTIVE = 'd320;
-    localparam  VID_H_TOTAL = 'd400;
-
-    reg [15:0]  frame_count;
-    
-    reg [9:0]   x_count;
-    reg [9:0]   y_count;
-    
-    wire [9:0]  visible_x = x_count - VID_H_BPORCH;
-    wire [9:0]  visible_y = y_count - VID_V_BPORCH;
-
-    reg [23:0]  vidout_rgb;
-    reg         vidout_de, vidout_de_1;
-    reg         vidout_skip;
-    reg         vidout_vs;
-    reg         vidout_hs, vidout_hs_1;
-    
-    reg [9:0]   square_x = 'd135;
-    reg [9:0]   square_y = 'd95;
-
-always @(posedge clk_core_12288 or negedge reset_n) begin
-
-    if(~reset_n) begin
-    
-        x_count <= 0;
-        y_count <= 0;
-        
-    end else begin
-        vidout_de <= 0;
-        vidout_skip <= 0;
-        vidout_vs <= 0;
-        vidout_hs <= 0;
-        
-        vidout_hs_1 <= vidout_hs;
-        vidout_de_1 <= vidout_de;
-        
-        // x and y counters
-        x_count <= x_count + 1'b1;
-        if(x_count == VID_H_TOTAL-1) begin
-            x_count <= 0;
-            
-            y_count <= y_count + 1'b1;
-            if(y_count == VID_V_TOTAL-1) begin
-                y_count <= 0;
-            end
-        end
-        
-        // generate sync 
-        if(x_count == 0 && y_count == 0) begin
-            // sync signal in back porch
-            // new frame
-            vidout_vs <= 1;
-            frame_count <= frame_count + 1'b1;
-        end
-        
-        // we want HS to occur a bit after VS, not on the same cycle
-        if(x_count == 3) begin
-            // sync signal in back porch
-            // new line
-            vidout_hs <= 1;
-        end
-
-        // inactive screen areas are black
-        vidout_rgb <= 24'h0;
-        // generate active video
-        if(x_count >= VID_H_BPORCH && x_count < VID_H_ACTIVE+VID_H_BPORCH) begin
-
-            if(y_count >= VID_V_BPORCH && y_count < VID_V_ACTIVE+VID_V_BPORCH) begin
-                // data enable. this is the active region of the line
-                vidout_de <= 1;
-                
-                vidout_rgb[23:16] <= 8'd60;
-                vidout_rgb[15:8]  <= 8'd60;
-                vidout_rgb[7:0]   <= 8'd60;
-                
-            end 
-        end
-    end
-end
-
-
-
-
-//
-// audio i2s silence generator
-// see other examples for actual audio generation
-//
-
-assign audio_mclk = audgen_mclk;
-assign audio_dac = audgen_dac;
-assign audio_lrck = audgen_lrck;
-
-// generate MCLK = 12.288mhz with fractional accumulator
-    reg         [21:0]  audgen_accum;
-    reg                 audgen_mclk;
-    parameter   [20:0]  CYCLE_48KHZ = 21'd122880 * 2;
-always @(posedge clk_74a) begin
-    audgen_accum <= audgen_accum + CYCLE_48KHZ;
-    if(audgen_accum >= 21'd742500) begin
-        audgen_mclk <= ~audgen_mclk;
-        audgen_accum <= audgen_accum - 21'd742500 + CYCLE_48KHZ;
-    end
-end
-
-// generate SCLK = 3.072mhz by dividing MCLK by 4
-    reg [1:0]   aud_mclk_divider;
-    wire        audgen_sclk = aud_mclk_divider[1] /* synthesis keep*/;
-    reg         audgen_lrck_1;
-always @(posedge audgen_mclk) begin
-    aud_mclk_divider <= aud_mclk_divider + 1'b1;
-end
-
-// shift out audio data as I2S 
-// 32 total bits per channel, but only 16 active bits at the start and then 16 dummy bits
-//
-    reg     [4:0]   audgen_lrck_cnt;    
-    reg             audgen_lrck;
-    reg             audgen_dac;
-always @(negedge audgen_sclk) begin
-    audgen_dac <= 1'b0;
-    // 48khz * 64
-    audgen_lrck_cnt <= audgen_lrck_cnt + 1'b1;
-    if(audgen_lrck_cnt == 31) begin
-        // switch channels
-        audgen_lrck <= ~audgen_lrck;
-        
-    end 
-end
-
-
-///////////////////////////////////////////////
-
-
-    wire    clk_core_12288;
-    wire    clk_core_12288_90deg;
-    
-    wire    pll_core_locked;
-    wire    pll_core_locked_s;
-synch_3 s01(pll_core_locked, pll_core_locked_s, clk_74a);
-
-mf_pllbase mp1 (
-    .refclk         ( clk_74a ),
-    .rst            ( 0 ),
-    
-    .outclk_0       ( clk_core_12288 ),
-    .outclk_1       ( clk_core_12288_90deg ),
-    
-    .locked         ( pll_core_locked )
+wire clk_sys, clk_video, clk_video_90;
+wire pll_core_locked, pll_core_locked_s;
+wire memory_setup_done;
+synch_3 lock_sync(pll_core_locked, pll_core_locked_s, clk_74a);
+gamecom_pll clocks (.refclk(clk_74a), .clk_sys(clk_sys),
+    .clk_video(clk_video), .clk_video_90(clk_video_90), .locked(pll_core_locked));
+assign video_rgb_clock = clk_video;
+assign video_rgb_clock_90 = clk_video_90;
+pocket_gamecom game (
+    .clk_bridge(clk_74a), .clk_sys(clk_sys), .clk_video(clk_video),
+    .pll_locked(pll_core_locked_s), .reset_n(reset_n),
+    .bridge_addr(bridge_addr), .bridge_wr(bridge_wr), .bridge_rd(bridge_rd),
+    .bridge_wr_data(bridge_wr_data), .bridge_rd_data(game_bridge_rd_data),
+    .slot_write(dataslot_requestwrite), .slot_id(dataslot_requestwrite_id),
+    .slot_size(dataslot_requestwrite_size), .all_complete(dataslot_allcomplete),
+    .slot_write_ok(dataslot_requestwrite_ok), .setup_done(memory_setup_done),
+    .rtc_date(rtc_date_bcd), .rtc_time(rtc_time_bcd), .rtc_valid(rtc_valid),
+    .state_start(savestate_start), .state_load(savestate_load),
+    .state_start_ack(savestate_start_ack), .state_start_busy(savestate_start_busy),
+    .state_start_ok(savestate_start_ok), .state_start_err(savestate_start_err),
+    .state_load_ack(savestate_load_ack), .state_load_busy(savestate_load_busy),
+    .state_load_ok(savestate_load_ok), .state_load_err(savestate_load_err),
+    .in_menu(osnotify_inmenu), .keys(cont1_key), .joy(cont1_joy),
+    .video_rgb(video_rgb), .video_de(video_de), .video_skip(video_skip),
+    .video_hs(video_hs), .video_vs(video_vs),
+    .audio_mclk(audio_mclk), .audio_lrck(audio_lrck), .audio_dac(audio_dac),
+    .cram_a(cram0_a), .cram_dq(cram0_dq), .cram_wait(cram0_wait),
+    .cram_clk(cram0_clk), .cram_adv_n(cram0_adv_n), .cram_cre(cram0_cre),
+    .cram_ce0_n(cram0_ce0_n), .cram_ce1_n(cram0_ce1_n),
+    .cram_oe_n(cram0_oe_n), .cram_we_n(cram0_we_n),
+    .cram_ub_n(cram0_ub_n), .cram_lb_n(cram0_lb_n),
+    .sram_a(sram_a), .sram_dq(sram_dq), .sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n),
+    .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n)
 );
-
-
-    
 endmodule

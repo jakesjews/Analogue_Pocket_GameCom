@@ -1,0 +1,49 @@
+# Local builds, release packages and SD backups
+/build/
+/release/
+/output/*
+!/output/.gitkeep
+
+# Generated APF build timestamps (created by the Quartus pre-flow script)
+/src/fpga/apf/build_id.v
+/src/fpga/apf/build_id.mif
+
+# User-provided BIOS, cartridges, saves and Pocket SD contents
+/assets/
+/Assets/
+/roms/
+/ROMS/
+/Saves/
+/Memories/
+/ROMS.zip
+/boot1.vhd
+/*.bin
+*.tgc
+*.rom
+*.sav
+*.state
+
+# Simulation output
+obj_dir/
+*.vcd
+*.fst
+*.vpd
+*.wlf
+transcript
+*.core
+
+# Python and local configuration
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+
+# Logs, editor backups and macOS metadata
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+._*

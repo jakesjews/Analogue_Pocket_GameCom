@@ -1,7 +1,63 @@
 {
-    "interact": {
-        "magic": "APF_VER_1",
-        "variables": [],
-        "messages": []
-    }
+  "interact": {
+    "magic": "APF_VER_1",
+    "variables": [
+      {
+        "id": 0,
+        "name": "LCD Palette",
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0x40000000",
+        "defaultval": 0,
+        "options": [
+          {
+            "value": 0,
+            "name": "Original"
+          },
+          {
+            "value": 1,
+            "name": "Green"
+          },
+          {
+            "value": 2,
+            "name": "Grayscale"
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "name": "Game.com Power",
+        "type": "action",
+        "enabled": true,
+        "address": "0x40000004",
+        "value": 1
+      },
+      {
+        "id": 2,
+        "name": "Game.com Sound",
+        "type": "action",
+        "enabled": true,
+        "address": "0x40000008",
+        "value": 1
+      },
+      {
+        "id": 3,
+        "name": "Cold Reset",
+        "type": "action",
+        "enabled": true,
+        "address": "0x4000000C",
+        "value": 1
+      },
+      {
+        "id": 4,
+        "name": "Eject Cartridge 2",
+        "type": "action",
+        "enabled": true,
+        "address": "0x40000010",
+        "value": 1
+      }
+    ],
+    "messages": []
+  }
 }
