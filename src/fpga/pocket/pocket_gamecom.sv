@@ -93,12 +93,12 @@ module pocket_gamecom (
     wire bridge_save = bridge_addr[31:13] == 19'h18000;
     wire [22:0] load_addr = {1'b0, bridge_cart2, bridge_addr[20:0]};
 
-    (* async_reg = "true" *) reg [2:0] reset_sync = 7;
-    (* async_reg = "true" *) reg [1:0] menu_sync = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] reset_sync = 7;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] menu_sync = 0;
     // Configuration is a bus: take a new value only after two equal samples.
     // It changes rarely (menu actions, or while the machine is in reset).
     wire [45:0] config_bridge = {power_active, sound_active, cart_loaded, cart2_mask, cart1_mask};
-    (* async_reg = "true" *) reg [45:0] config_meta = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [45:0] config_meta = 0;
     reg [45:0] config_check = 0, config_last = 0, config_sync = 0;
     always @(posedge clk_sys) begin
         reset_sync <= {reset_sync[1:0], reset_request};
@@ -139,7 +139,7 @@ module pocket_gamecom (
         .load_wr(bridge_wr && (bridge_cart1 || bridge_cart2)),
         .load_addr(load_addr), .load_data(bridge_wr_data),
         .load_idle(cart_idle), .overflow(cart_overflow),
-        .invalidate(core_reset || state_pause), .cpu_rd(cart_rd && !bios_sel && present && !core_reset),
+        .invalidate(core_reset || state_pause), .flush(core_reset), .cpu_rd(cart_rd && !bios_sel && present && !core_reset),
         .cpu_addr(physical_addr), .cpu_ready(rom_ready), .cpu_data(rom_data),
         .cram_a(cram_a), .cram_dq(cram_dq), .cram_wait(cram_wait),
         .cram_clk(cram_clk), .cram_adv_n(cram_adv_n), .cram_cre(cram_cre),
@@ -243,7 +243,7 @@ module pocket_gamecom (
         .cpu_doffb_o(), .cpu_stopped_o(cpu_stopped), .uart_rts_o(), .uart_dtr_o(),
         .savestate_pause_ready_o(state_pause_ready), .savestate_mem_rdata_o(state_core_q)
     );
-    (* async_reg = "true" *) reg [1:0] palette_meta = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] palette_meta = 0;
     reg [1:0] palette_check = 0, palette_last = 0, palette_video = 0;
     always @(posedge clk_video) begin
         palette_meta <= display_palette; palette_check <= palette_meta; palette_last <= palette_check;

@@ -17,25 +17,28 @@ module pocket_state (
     reg [3:0] state=IDLE;
     reg restoring=0;
     reg [14:0] index=0;
-    (* async_reg="true" *) reg [1:0] start_sync=0,load_sync=0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] start_sync=0,load_sync=0;
     // status holds busy/ok/error; bits 0 and 4 come from the ack flags.
     reg [7:0] status=0;
     reg start_acked=0,load_acked=0;
     wire [7:0] status_word={status[7:5],load_acked,status[3:1],start_acked};
     // Status is a bus: take a new value only after two equal samples, so a
     // busy-to-ok change is never seen half-updated by the bridge.
-    (* async_reg="true" *) reg [7:0] status_meta=0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [7:0] status_meta=0;
     reg [7:0] status_check=0,status_last=0,status_bridge=0;
     reg invalid_header=0;
     // Reject truncated or out-of-order restore transfers, even if an older
     // complete snapshot remains in the staging RAM.
     reg [12:0] restore_words=0;
     reg restore_order_bad=0;
-    (* async_reg="true" *) reg [1:0] restore_complete_sync=0;
+    reg restore_complete=0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] restore_complete_sync=0;
     // Tracking restarts with every blob write at address 0. It is not reset
     // with the machine, which lives on another clock and may be in reset
     // while APF writes the blob.
     always @(posedge clk_bridge) begin
+        // Registered so the synchronizer is fed straight from a register.
+        restore_complete<=restore_words==BYTES/4&&!restore_order_bad;
         if(bridge_wr)begin
             if(bridge_addr==0)begin restore_words<=1;restore_order_bad<=0;end
             else if(!restore_order_bad&&bridge_addr=={restore_words,2'b00}&&restore_words<BYTES/4)
@@ -92,7 +95,7 @@ module pocket_state (
     wire load_request=load_sync[1]&&!load_acked;
     always @(posedge clk_sys)begin
         start_sync<={start_sync[0],start};load_sync<={load_sync[0],load};
-        restore_complete_sync<={restore_complete_sync[0],restore_words==BYTES/4&&!restore_order_bad};
+        restore_complete_sync<={restore_complete_sync[0],restore_complete};
         if(!start_sync[1])start_acked<=0;
         if(!load_sync[1])load_acked<=0;
         if(reset)begin

@@ -19,11 +19,16 @@ set_max_delay 20.0 -from [get_ports {sram_dq[*]}] -to [get_registers {*|u_cpu|*}
 set_max_delay 12.0 -from [get_registers {*|rom|memory|*}] -to [get_ports {cram0_a[*] cram0_dq[*] cram0_adv_n cram0_oe_n cram0_we_n cram0_ce0_n cram0_ub_n cram0_lb_n}]
 set_max_delay 8.0 -from [get_ports {cram0_dq[*]}] -to [get_registers {*|rom|memory|data_out*}]
 
-# Reserve 250 ps beyond the normal same-clock hold relationship on the
-# CPU GP-store write-data registers of both RAM ports. This steers routing
-# away from the short register-to-M10K paths that fail the fast-corner hold
-# check (port B in the first 0.1.3 fit, port A in the first 0.2.0 fit).
-set_min_delay 0.250 -from [get_registers {*|u_gp_store|wdata_a_q* *|u_gp_store|wdata_b_q*}]
+# The CPU GP-store registers feed M10K inputs directly, and the RAM clock
+# arrives about 0.4 ns after the register clock, so these paths have the
+# smallest hold margin in the design. Ask the Fitter for 300 ps more than the
+# hold requirement on every register-to-RAM input of the GP store. The guard
+# band applies in the Fitter only: sign-off timing analysis checks the real
+# hold requirement. As an SDC requirement it only passed when the router
+# happened to overshoot (it failed first fits of 0.1.3, 0.2.0 and 0.2.1).
+if {$::quartus(nameofexecutable) eq "quartus_fit"} {
+    set_min_delay 0.300 -from [get_registers {*|u_gp_store|wdata_a_q* *|u_gp_store|wdata_b_q* *|u_gp_store|wren_a_q* *|u_gp_store|wren_b_q* *|u_gp_store|addr_a_q* *|u_gp_store|addr_b_q*}]
+}
 
 # Bundled-data mailboxes across the asynchronous groups above. Each data bus
 # is held stable while its toggle passes a two-flop synchronizer, which adds

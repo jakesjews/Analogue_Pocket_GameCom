@@ -10,7 +10,7 @@ module pocket_rtc #(parameter TICKS_PER_SECOND = 20000000) (
     input wire host_valid, input wire [23:0] host_date, input wire [23:0] host_time,
     output wire [64:0] rtc
 );
-    (* async_reg = "true" *) reg [2:0] valid_sync = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] valid_sync = 0;
     reg seeded = 0;
     reg [7:0] year = 0, month = 8'h01, day = 8'h01, hour = 0, minute = 0, second = 0;
     reg [24:0] tick = 0;

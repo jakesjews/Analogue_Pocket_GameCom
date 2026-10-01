@@ -13,10 +13,10 @@ module pocket_audio (
     reg [5:0] bitpos = 0;
     reg [15:0] sample = 0;
     reg request = 0;
-    (* async_reg = "true" *) reg [1:0] request_sync = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] request_sync = 0;
     reg ack = 0;
     reg [15:0] held = 0;
-    (* async_reg = "true" *) reg [1:0] ack_sync = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] ack_sync = 0;
     reg [15:0] latest = 0;
     always @(posedge clk_sys) begin
         request_sync <= {request_sync[0], request};

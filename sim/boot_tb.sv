@@ -53,6 +53,7 @@ module boot_tb;
     // cartridge read is waiting for PSRAM data.
     longint active_cycles=0,halted_cycles=0,cart_accesses=0,cart_wait_cycles=0;
     reg prev_cart_rd=0;
+    integer trace_file=0;
     task bench_restart;
         active_cycles=0;halted_cycles=0;cart_accesses=0;cart_wait_cycles=0;
     endtask
@@ -65,7 +66,11 @@ module boot_tb;
         active_cycles++;
         if(dut.machine.u_cpu.halted_q||dut.machine.cpu_stopped_w)halted_cycles++;
         prev_cart_rd<=dut.cart_rd&&!dut.bios_sel;
-        if(dut.cart_rd&&!dut.bios_sel&&!prev_cart_rd)cart_accesses++;
+        if(dut.cart_rd&&!dut.bios_sel&&!prev_cart_rd)begin
+            cart_accesses++;
+            // +TRACE=file lists each cartridge access as a physical halfword address.
+            if(trace_file!=0&&dut.present)$fwrite(trace_file,"%h\n",dut.physical_addr[22:1]);
+        end
         if(dut.cart_rd&&!dut.bios_sel&&dut.present&&!dut.rom_ready)cart_wait_cycles++;
     end
     always @(posedge clk_sys) begin
@@ -169,7 +174,7 @@ module boot_tb;
         press(16'h0104,50);press(16'h0104,50);press(16'h0104,50);
         press(16'h0200,150);
     endtask
-    string bios,cart,save,out,frame_prefix,state_out,state_in;
+    string bios,cart,save,out,frame_prefix,state_out,state_in,trace_name;
     reg previous_stopped=0;
     always @(posedge clk_sys)if(!dut.core_reset)begin
         previous_stopped<=dut.machine.cpu_stopped_w;
@@ -187,6 +192,7 @@ module boot_tb;
         if(!$value$plusargs("FRAME_PREFIX=%s",frame_prefix))frame_prefix="";
         if(!$value$plusargs("STATE_OUT=%s",state_out))state_out="";
         if(!$value$plusargs("STATE_IN=%s",state_in))state_in="";
+        if($value$plusargs("TRACE=%s",trace_name))trace_file=$fopen(trace_name,"w");
         #1000;pll_locked=1;wait(setup_done);
         load_file(bios,1,32'h10000000);
         if(cart!="")load_file(cart,0,0);

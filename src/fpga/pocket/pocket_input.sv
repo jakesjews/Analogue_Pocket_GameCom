@@ -11,8 +11,8 @@ module pocket_input #(parameter REPEAT_CYCLES = 2500000, parameter POWER_CYCLES 
     output wire touching, output wire cursor_visible,
     output reg [3:0] touch_x = 5, output reg [3:0] touch_y = 4
 );
-    (* async_reg = "true" *) reg [31:0] keys_meta, keys_sync;
-    (* async_reg = "true" *) reg [3:0] stick_meta, stick_sync;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [31:0] keys_meta, keys_sync;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [3:0] stick_meta, stick_sync;
     // A 100 ms Power press: supplied once after reset to start the BIOS, and
     // again when a face button or Start is pressed while the Game.com is
     // stopped (powered off), so it can be woken without the Pocket menu.

@@ -34,3 +34,5 @@ Version 0.1.4 frame-pacing fit: **16,401 ALMs, 5,804 flip-flops, 119 M10Ks, 911,
 The 0.1.4 fit passes all 80 constrained timing checks without changing the 0.1.3 timing constraints. Detailed final RAM placement and timing evidence are retained in `build/frame-pacing-resources.json`, `build/frame-pacing-ram-summary.json` and `build/frame-pacing-timing.json`.
 
 Version 0.2.0 fit: **16,645 ALMs, 5,922 flip-flops, 119 M10Ks, 911,360 RAM bits**. Compared with 0.1.4 this is 244 more ALMs and 118 more flip-flops, for the second ROM entry and prefetch control, the running RTC, the synchronizer check stages and the registered crossing flags. RAM use is unchanged. Timing needed the GP-store hold reservation extended to write port A; see the validation record.
+
+Version 0.2.1 fit: **16,709 ALMs, 5,962 flip-flops, 169 M10Ks, 1,320,960 RAM bits**. The cartridge ROM cache adds exactly 409,600 bits in 50 M10Ks (16,384 entries of valid, 8-bit tag and 16-bit data); the whole build uses 64 more ALMs and 40 more flip-flops than 0.2.0. The cache is block RAM with no MLABs or register arrays.
