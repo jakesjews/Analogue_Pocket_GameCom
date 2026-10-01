@@ -6,10 +6,10 @@ module io_tb;
     reg [10:0] bridge_addr=0;reg bridge_wr=0;reg [31:0] bridge_data=0;wire [31:0] bridge_q;
     reg [12:0] cpu_addr=0;reg cpu_wr=0;reg [7:0] cpu_data=0;wire [7:0] cpu_q;
     pocket_save_ram ram(.*);
-    reg reset=1,in_menu=0,power_press=0,sound_press=0;
-    reg [31:0] keys=32'h10000000,joy=32'h80808080;
+    reg reset=1,in_menu=0,power_press=0,sound_press=0,stopped=0;
+    reg [31:0] keys=32'h10000000;reg [3:0] stick=0;
     wire[11:0] buttons;wire touching,cursor_visible;wire[3:0] touch_x,touch_y;
-    pocket_input #(.REPEAT_CYCLES(8)) controls(.clk(clk_sys),.*);
+    pocket_input #(.REPEAT_CYCLES(8),.POWER_CYCLES(20)) controls(.clk(clk_sys),.*);
     reg [15:0] pcm_unsigned=16'h9234;
     wire mclk,lrck,dac;
     pocket_audio sound(.*);
@@ -51,13 +51,28 @@ module io_tb;
         key(16'h0108);
         if(buttons[3:0]!=0||!cursor_visible)$fatal(1,"Touch movement leaked into game");
         repeat(120)@(negedge clk_sys);
-        if(touch_x!=11)$fatal(1,"Touch X clamp %d",touch_x);
+        if(touch_x!=12)$fatal(1,"Touch X clamp %d, expected the 13th column",touch_x);
         key(16'h0110);
         if(!touching||buttons[6])$fatal(1,"L+A touch");
         key(16'h0200);if(!touching)$fatal(1,"R touch");
+        // Docked analog controller: the right stick moves the cursor.
+        @(negedge clk_sys);keys=32'h30000000;stick=4'b0100;
+        repeat(40)@(negedge clk_sys);
+        if(touch_x>=12||!cursor_visible)$fatal(1,"Right stick did not move the cursor");
+        stick=0;keys=32'h10000000;repeat(5)@(negedge clk_sys);
+        // A stopped (powered-off) Game.com wakes on a face button press; a
+        // running one does not see a Power press from the same button.
+        repeat(30)@(negedge clk_sys);
+        if(buttons[11])$fatal(1,"Startup Power press did not end");
+        key(16'h0010);repeat(5)@(negedge clk_sys);
+        if(buttons[11])$fatal(1,"Face button pressed Power while running");
+        key(16'h0000);stopped=1;key(16'h0010);
+        if(!buttons[11])$fatal(1,"Face button did not wake a stopped Game.com");
+        stopped=0;key(16'h0000);repeat(30)@(negedge clk_sys);
+        if(buttons[11])$fatal(1,"Wake Power press did not end");
         in_menu=1;#1;if(touching)$fatal(1,"Menu input leaked");
         #300000;
         if(frames<20)$fatal(1,"I2S not running");
-        $display("PASS IO: NVRAM byte lanes, touch controls, menu filtering, coherent signed I2S");$finish;
+        $display("PASS IO: NVRAM byte lanes, touch controls, stick, wake from STOP, menu filtering, coherent signed I2S");$finish;
     end
 endmodule

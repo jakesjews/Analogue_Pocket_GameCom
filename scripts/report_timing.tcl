@@ -6,5 +6,7 @@ update_timing_netlist
 report_timing -setup -npaths 20 -detail full_path -file ../../build/worst-setup-paths.rpt
 report_timing -hold -npaths 10 -detail full_path -file ../../build/worst-hold-paths.rpt
 report_ucp -file ../../build/unconstrained-paths.rpt
+# Bundled-data mailbox bounds from core_constraints.sdc.
+report_net_delay -file ../../build/net-delay.rpt
 delete_timing_netlist
 project_close

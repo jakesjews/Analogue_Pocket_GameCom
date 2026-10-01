@@ -29,7 +29,17 @@ module state_tb;
     endtask
     initial begin
         for(integer i=0;i<26880;i++)memory[i]=(i*17+(i>>8))&255;
-        #500;reset=0;
+        // Requests made while the machine is in reset are acknowledged with
+        // an error instead of being left waiting.
+        #500;
+        @(negedge clk_bridge);start=1;wait(start_ack);
+        if(!start_err||start_busy)$fatal(1,"Capture during reset was not refused");
+        @(negedge clk_bridge);start=0;wait(!start_ack);
+        @(negedge clk_bridge);load=1;wait(load_ack);
+        if(!load_err||load_busy)$fatal(1,"Restore during reset was not refused");
+        @(negedge clk_bridge);load=0;wait(!load_ack);
+        if(pause_req)$fatal(1,"Refused request paused the machine");
+        reset=0;
         @(negedge clk_bridge);start=1;wait(start_ack);
         @(negedge clk_bridge);start=0;
         wait(start_ok);wait(!pause_req);
@@ -58,7 +68,16 @@ module state_tb;
         @(negedge clk_bridge);load=0;
         wait(load_err&&!load_busy);wait(!pause_req);
         if(memory[0]!==8'ha5)$fatal(1,"Truncated restore modified machine");
-        $display("PASS Memories: 26880-byte capture/restore, APF words, header and length validation, pause release");$finish;
+        // A blob written while the machine is in reset still restores later.
+        reset=1;
+        for(integer i=0;i<6728;i++)writeword(i*4,blob[i]);
+        #1000;reset=0;
+        @(negedge clk_bridge);load=1;wait(load_ack);
+        @(negedge clk_bridge);load=0;
+        wait(load_ok||load_err);if(load_err)$fatal(1,"Blob written during reset was rejected");wait(!pause_req);
+        for(integer i=0;i<26880;i++)if(memory[i]!==((i*17+(i>>8))&255))errors++;
+        if(errors)$fatal(1,"Restore after reset differs: %0d bytes",errors);
+        $display("PASS Memories: 26880-byte capture/restore, APF words, header and length validation, pause release, requests during reset");$finish;
     end
     initial begin #100000000;$fatal(1,"State timeout");end
 endmodule

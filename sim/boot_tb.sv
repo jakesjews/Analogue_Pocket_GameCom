@@ -27,7 +27,7 @@ module boot_tb;
     wire state_start_ack,state_start_busy,state_start_ok,state_start_err;
     wire state_load_ack,state_load_busy,state_load_ok,state_load_err;
     pocket_gamecom dut(.*,.rtc_date(32'h20260909),.rtc_time(32'h03131500),
-        .rtc_valid(1'b1),.in_menu(1'b0),.cram_a(a),.cram_dq(dq),.cram_wait(1'b0),
+        .rtc_valid(1'b1),.in_menu(1'b0),.grayscale(1'b0),.cram_a(a),.cram_dq(dq),.cram_wait(1'b0),
         .cram_clk(cclk),.cram_adv_n(adv),.cram_cre(cre),.cram_ce0_n(ce0),
         .cram_ce1_n(ce1),.cram_oe_n(oe),.cram_we_n(we),.cram_ub_n(ub),.cram_lb_n(lb));
     psram_model ram(clk_bridge,a,dq,adv,ce0,ce1,oe,we,ub,lb);
@@ -48,11 +48,31 @@ module boot_tb;
     integer frame=0,pixels=0,lines=0,line_pixels=0,last_vs_clocks=100;
     reg prev_de=0;reg [23:0] framebuffer[0:31999];
     integer f,n,rom_reads=0,cart_reads=0,save_writes=0,nonuniform=0;
+    // Cartridge-speed counters, restarted after a checkpoint resumes: CPU
+    // cycles, cycles spent halted, cartridge accesses and cycles in which a
+    // cartridge read is waiting for PSRAM data.
+    longint active_cycles=0,halted_cycles=0,cart_accesses=0,cart_wait_cycles=0;
+    reg prev_cart_rd=0;
+    task bench_restart;
+        active_cycles=0;halted_cycles=0;cart_accesses=0;cart_wait_cycles=0;
+    endtask
+    function string bench_summary;
+        bench_summary=$sformatf("cycles=%0d halted=%0d cart_accesses=%0d cart_wait_cycles=%0d wait_share=%0.2f%%",
+            active_cycles,halted_cycles,cart_accesses,cart_wait_cycles,
+            100.0*cart_wait_cycles/(active_cycles-halted_cycles+1));
+    endfunction
+    always @(posedge clk_sys) if(!dut.core_reset && !dut.state_pause) begin
+        active_cycles++;
+        if(dut.machine.u_cpu.halted_q||dut.machine.cpu_stopped_w)halted_cycles++;
+        prev_cart_rd<=dut.cart_rd&&!dut.bios_sel;
+        if(dut.cart_rd&&!dut.bios_sel&&!prev_cart_rd)cart_accesses++;
+        if(dut.cart_rd&&!dut.bios_sel&&dut.present&&!dut.rom_ready)cart_wait_cycles++;
+    end
     always @(posedge clk_sys) begin
         if(!dut.core_reset && dut.cart_rd && dut.phi0)begin
             rom_reads++;if(!dut.bios_sel)cart_reads++;
             if(rom_reads<30)begin
-              $display("ROM pc=%h a=%h phys=%h ready=%b data=%h request=%b ack=%b cache=%b",dut.machine.u_cpu.pc_q,dut.cart_addr,dut.physical_addr,dut.rom_ready,dut.rom_data,dut.rom.request,dut.rom.ack,dut.rom.cache_valid);$fflush();
+              $display("ROM pc=%h a=%h phys=%h ready=%b data=%h request=%b ack=%b current=%b next=%b",dut.machine.u_cpu.pc_q,dut.cart_addr,dut.physical_addr,dut.rom_ready,dut.rom_data,dut.rom.request,dut.rom.ack,dut.rom.current_valid,dut.rom.next_valid);$fflush();
             end
         end
         if(!dut.core_reset && dut.save_wr)save_writes++;
@@ -99,8 +119,11 @@ module boot_tb;
         #1000000;
         for(integer i=0;i<6728;i++)writeword(32'h50000000+i*4,snapshot[i]);
         @(negedge clk_bridge);state_load=1;wait(state_load_ack);
-        @(negedge clk_bridge);state_load=0;wait(state_load_ok||state_load_err);
-        if(state_load_err)$fatal(1,"Live CPU restore failed");
+        @(negedge clk_bridge);state_load=0;
+        // Compare at the end of the restore (RELEASE), while the machine is
+        // still paused; APF's ok arrives a few bridge clocks later.
+        wait(dut.memories.state==7);#1;
+        if(dut.memories.status!=8'h40)$fatal(1,"Live CPU restore failed");
         if(!dut.state_pause)$fatal(1,"CPU resumed before restore completed");
         if(dut.machine.u_cpu.pc_q!==snapshot[6216][15:0])
             $fatal(1,"Restored PC %h expected %h",dut.machine.u_cpu.pc_q,snapshot[6216][15:0]);
@@ -113,6 +136,8 @@ module boot_tb;
             if({dut.nvram.lanes[3].mem[i],dut.nvram.lanes[2].mem[i],dut.nvram.lanes[1].mem[i],dut.nvram.lanes[0].mem[i]}!==snapshot[8+i])errors++;
         end
         if(errors)$fatal(1,"Live CPU restore memory mismatches: %0d",errors);
+        wait(state_load_ok||state_load_err);
+        if(state_load_err)$fatal(1,"Live CPU restore reported an error");
         $display("PASS live Memories: restored PC=%h, 16 KB VRAM and 8 KB NVRAM",dut.machine.u_cpu.pc_q);$fflush();
         wait(!dut.state_pause);
     endtask
@@ -132,6 +157,7 @@ module boot_tb;
         @(negedge clk_bridge);state_load=1;wait(state_load_ack);
         @(negedge clk_bridge);state_load=0;wait(state_load_ok||state_load_err);
         if(state_load_err)$fatal(1,"State resume failed");wait(!dut.state_pause);
+        bench_restart();
         $display("Resumed %s at PC %h",filename,dut.machine.u_cpu.pc_q);$fflush();
     endtask
     task press(input[15:0] bits,input integer ms);
@@ -190,6 +216,7 @@ module boot_tb;
         $fclose(f);
         if(nonuniform<100)$fatal(1,"Frame is blank/uniform");
         $display("PASS BIOS boot: frames=%d reads=%d cartridge_reads=%d save_writes=%d nonuniform=%d pc=%h output=%s",frame,rom_reads,cart_reads,save_writes,nonuniform,dut.machine.u_cpu.pc_q,out);
+        $display("Cartridge speed: %s",bench_summary());
         if(state_out!="")begin
             @(negedge clk_bridge);state_start=1;wait(state_start_ack);
             @(negedge clk_bridge);state_start=0;wait(state_start_ok||state_start_err);

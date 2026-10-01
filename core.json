@@ -8,9 +8,9 @@
       "shortname": "GameCom",
       "description": "Tiger Game.com. MiSTer core by Jamie Blanks; Pocket port.",
       "author": "jacob",
-      "url": "https://github.com/MiSTer-devel/GameCom_MiSTer",
-      "version": "0.1.4",
-      "date_release": "2026-09-09"
+      "url": "https://github.com/jakesjews/Analogue_Pocket_GameCom",
+      "version": "0.2.0",
+      "date_release": "2026-09-29"
     },
     "framework": {
       "target_product": "Analogue Pocket",

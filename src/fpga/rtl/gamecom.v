@@ -63,6 +63,7 @@ module GameCom #(parameter VIDEO_DIV = 10, parameter DMA_ROM_WAIT = 1'b0, parame
 	output wire cpu_txdb_o,
 	output wire cpu_lcd_clk_o,
 	output wire cpu_doffb_o,
+	output wire cpu_stopped_o,
 	output wire uart_rts_o,
 	output wire uart_dtr_o,
 	output wire savestate_pause_ready_o,
@@ -231,6 +232,7 @@ module GameCom #(parameter VIDEO_DIV = 10, parameter DMA_ROM_WAIT = 1'b0, parame
 	assign cpu_txdb_o = cpu_txdb_w;
 	assign cpu_lcd_clk_o = cpu_clk_w;
 	assign cpu_doffb_o = cpu_doffb_w;
+	assign cpu_stopped_o = cpu_stopped_w;
 	assign cpu_p3_din_w = {
 		board_p3_din_w[7:4],
 		board_p3_din_w[3] & uart_dsr_i,

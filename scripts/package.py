@@ -55,9 +55,13 @@ def package():
                                if p.suffix in {".v", ".sv", ".vhd", ".qsf", ".qip", ".sdc"}
                                and "/db/" not in str(p) and "/incremental_db/" not in str(p)):
         raise SystemExit("Bitstream predates source edits; rebuild first")
+    # Users unzip the release onto the SD card root, so everything lives under
+    # Cores, Platforms or Assets. Rebuild it from scratch so no stale file
+    # from an earlier layout survives.
     release = ROOT / "release"
+    shutil.rmtree(release, ignore_errors=True)
     target = release / "Cores" / CORE
-    target.mkdir(parents=True, exist_ok=True)
+    target.mkdir(parents=True)
     table = bytes(int(f"{n:08b}"[::-1], 2) for n in range(256))
     reversed_rbf = rbf.read_bytes().translate(table)
     (target / "bitstream.rbf_r").write_bytes(reversed_rbf)
@@ -66,30 +70,26 @@ def package():
         source = ROOT / f"{name}.json"
         json.loads(source.read_text())
         shutil.copy2(source, target / source.name)
-    (target / "Interact").mkdir(exist_ok=True)
-    shutil.copy2(ROOT / "interact.json", target / "Interact/interact.json")
     shutil.copy2(ROOT / "interact.json", target / "interact.json")
-    shutil.copy2(ROOT / "info.txt", target / "info.txt")
-    (release / "Platforms").mkdir(exist_ok=True)
+    for name in ("info.txt", "LICENSE", "README.md"):
+        shutil.copy2(ROOT / name, target / name)
+    shutil.copy2(ROOT / "dist/icon.bin", target / "icon.bin")
+    (release / "Platforms/_images").mkdir(parents=True)
     shutil.copy2(ROOT / "dist/platforms/gamecom.json", release / "Platforms/gamecom.json")
-    (release / "Assets/gamecom/common").mkdir(parents=True, exist_ok=True)
-    for name in ("LICENSE", "README.md"):
-        shutil.copy2(ROOT / name, release / name)
-    (release / "docs").mkdir(exist_ok=True)
-    for source in (ROOT / "docs").glob("*.md"):
-        shutil.copy2(source, release / "docs" / source.name)
+    shutil.copy2(ROOT / "dist/platforms/_images/gamecom.bin", release / "Platforms/_images/gamecom.bin")
+    (release / "Assets/gamecom/common").mkdir(parents=True)
     manifest = {"core": CORE, "version": metadata["version"],
                 "upstream": "96ed90ec865302d5eb5a0aa8336844dbfb4a5342",
                 "source_sha256": source_digest(),
                 "sof_sha256": hashlib.sha256((out / "ap_core.sof").read_bytes()).hexdigest(),
                 "rbf_sha256": hashlib.sha256(rbf.read_bytes()).hexdigest(),
                 "rbf_r_sha256": hashlib.sha256(reversed_rbf).hexdigest()}
-    (release / "build.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (target / "build.json").write_text(json.dumps(manifest, indent=2) + "\n")
     archive = ROOT / "build" / f"{CORE}_{metadata['version']}.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+        # Directories are stored too, so the empty BIOS folder is created.
         for p in sorted(release.rglob("*")):
-            if p.is_file():
-                z.write(p, p.relative_to(release))
+            z.write(p, p.relative_to(release))
     print(f"Packaged {target}; {archive}")
     print(json.dumps(manifest, indent=2))
 

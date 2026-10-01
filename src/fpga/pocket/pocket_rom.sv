@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// ROM backing in the first PSRAM die. Byte layout:
-// 000000-1fffff cart 1, 200000-3fffff cart 2, 400000-43ffff BIOS.
+// Cartridge ROM backing in the first PSRAM die. Byte layout:
+// 000000-1fffff cart 1, 200000-3fffff cart 2. The BIOS is in SRAM.
 // Bridge words are little endian. APF has no wait signal: a 1024-word FIFO
 // absorbs bursts while each word is committed as two 16-bit PSRAM writes.
+// CPU reads are served from two halfword entries: the current halfword and
+// the next one, which is prefetched while the CPU works on the current one.
 module pocket_rom (
     input wire clk_bridge, input wire clk_sys, input wire reset,
     input wire load_wr, input wire [22:0] load_addr,
@@ -40,30 +42,50 @@ module pocket_rom (
     reg [21:0] request_addr = 0;
     reg [15:0] response = 0;
     (* async_reg = "true" *) reg [1:0] request_sync = 0, ack_sync = 0;
-    reg [21:0] cache_addr = 0;
-    reg [15:0] cache_data = 0;
-    reg cache_valid = 0;
-    wire hit = cache_valid && cache_addr == cpu_addr[22:1];
+    // Entry 0 holds the halfword the CPU is using; entry 1 holds the next.
+    // Every entry is filled by a completed read of its own address, so a hit
+    // is always correct data. Only one request is in flight at a time.
+    reg [21:0] current_addr = 0, next_addr = 0;
+    reg [15:0] current_data = 0, next_data = 0;
+    reg current_valid = 0, next_valid = 0;
+    wire [21:0] halfword = cpu_addr[22:1];
+    wire current_hit = current_valid && current_addr == halfword;
+    wire next_hit = next_valid && next_addr == halfword;
+    wire hit = current_hit || next_hit;
     assign cpu_ready = !cpu_rd || (hit && !invalidate);
-    assign cpu_data = cpu_addr[0] ? cache_data[15:8] : cache_data[7:0];
-    reg outstanding = 0;
+    wire [15:0] hit_data = next_hit ? next_data : current_data;
+    assign cpu_data = cpu_addr[0] ? hit_data[15:8] : hit_data[7:0];
+    reg outstanding = 0, prefetching = 0;
+    wire [21:0] following = current_addr + 1'b1;
+    wire want_prefetch = current_valid && !(next_valid && next_addr == following);
     always @(posedge clk_sys) begin
         ack_sync <= {ack_sync[0], ack};
         if (reset) begin
-            request <= 0; request_addr <= 0; cache_valid <= 0;
-            outstanding <= 0; ack_sync <= 0;
+            request <= 0; request_addr <= 0; current_valid <= 0; next_valid <= 0;
+            outstanding <= 0; prefetching <= 0; ack_sync <= 0;
         end else begin
+            // The CPU has moved on to the prefetched halfword.
+            if (!invalidate && cpu_rd && next_hit && !current_hit) begin
+                current_addr <= next_addr; current_data <= next_data;
+                current_valid <= 1; next_valid <= 0;
+            end
             if (outstanding && ack_sync[1] == request) begin
-                cache_addr <= request_addr;
-                cache_data <= response;
-                cache_valid <= !invalidate;
+                if (prefetching) begin
+                    next_addr <= request_addr; next_data <= response; next_valid <= !invalidate;
+                end else begin
+                    current_addr <= request_addr; current_data <= response; current_valid <= !invalidate;
+                end
                 outstanding <= 0;
             end
-            if (invalidate) cache_valid <= 0;
-            if (!invalidate && cpu_rd && !hit && !outstanding) begin
-                request_addr <= cpu_addr[22:1];
-                request <= !request;
-                outstanding <= 1;
+            if (invalidate) begin current_valid <= 0; next_valid <= 0; end
+            if (!invalidate && !outstanding) begin
+                if (cpu_rd && !hit) begin
+                    request_addr <= halfword; request <= !request;
+                    outstanding <= 1; prefetching <= 0;
+                end else if (want_prefetch && !(cpu_rd && next_hit && !current_hit)) begin
+                    request_addr <= following; request <= !request;
+                    outstanding <= 1; prefetching <= 1;
+                end
             end
         end
     end

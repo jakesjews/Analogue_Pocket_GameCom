@@ -26,7 +26,7 @@ def install():
     if not (args.volume / "Cores").is_dir() or not (args.volume / "Assets").is_dir():
         raise SystemExit("Not an existing Pocket SD card")
     release = ROOT / "release"
-    if not (release / "build.json").exists():
+    if not (release / "Cores/jacob.GameCom/build.json").exists():
         raise SystemExit("Build and package first")
     backup_root = ROOT / "build/sd-backup" / str(time.time_ns())
     for group in ("Cores", "Platforms"):

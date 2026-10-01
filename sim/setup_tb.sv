@@ -61,12 +61,32 @@ module setup_tb;
         slot(0, 2097152, 0);
         slot(1, 262144, 0);
         slot(3, 8192, 0);
+        // Memories requests while the machine is in reset must be answered
+        // (with an error), or every later host command would stall.
+        host_write(32'hf8000020, 32'h1);
+        command(16'h00a0, 3);
+        command(16'h00a4, 3);
         command(16'h008f, 0);
         host_read(32'hf8001000, result);
         if (result != 32'h636d0140) $fatal(1, "Missing ready-to-run command: %08x", result);
         host_write(32'hf8001000, 32'h6f6b0000);
         command(16'h0011, 0);
         if (!dut.reset_n) $fatal(1, "Host reset exit was not applied");
+        // Grayscale LCD display modes need the 444D reply and gray output.
+        host_write(32'hf8000020, 32'h2001);
+        command(16'h00b8, 0);
+        host_read(32'hf8000040, result);
+        if (result[15:0] != 16'h444d) $fatal(1, "Grayscale display mode reply %08x", result);
+        repeat (4) @(negedge clk);
+        if (dut.game.display_palette != 2) $fatal(1, "Grayscale mode did not select gray output");
+        host_write(32'hf8000020, 32'h3000);
+        command(16'h00b8, 0);
+        repeat (4) @(negedge clk);
+        if (dut.game.display_palette != 0) $fatal(1, "Color display mode kept gray output");
+        // The menu's Game.com Power action reaches the key matrix on clk_sys.
+        host_write(32'h40000004, 32'h01000000);
+        #2000;
+        if (!dut.game.config_sync[45] || !dut.game.buttons[11]) $fatal(1, "Power action did not reach the Game.com");
         // Reject the CURRENT invalid request, then accept a following valid one.
         slot(99, 8192, 2);
         slot(2, 32768, 0);
@@ -79,7 +99,7 @@ module setup_tb;
         command(16'h008f, 0);
         command(16'h0010, 0);
         if (dut.reset_n) $fatal(1, "Host reset enter was not applied");
-        $display("PASS: actual core_top APF setup, slot acceptance/rejection, ready notification and reset commands");
+        $display("PASS: actual core_top APF setup, slot acceptance/rejection, ready notification, reset commands, Memories in reset, display modes, Power action");
         $finish;
     end
     initial begin #10000000; $fatal(1, "Setup test timed out"); end

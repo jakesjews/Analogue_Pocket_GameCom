@@ -20,6 +20,23 @@ set_max_delay 12.0 -from [get_registers {*|rom|memory|*}] -to [get_ports {cram0_
 set_max_delay 8.0 -from [get_ports {cram0_dq[*]}] -to [get_registers {*|rom|memory|data_out*}]
 
 # Reserve 250 ps beyond the normal same-clock hold relationship on the
-# CPU GP-store write-data registers. This steers routing away from the
-# short register-to-M10K paths that failed the fast-corner hold check.
-set_min_delay 0.250 -from [get_registers {*|u_gp_store|wdata_b_q*}]
+# CPU GP-store write-data registers of both RAM ports. This steers routing
+# away from the short register-to-M10K paths that fail the fast-corner hold
+# check (port B in the first 0.1.3 fit, port A in the first 0.2.0 fit).
+set_min_delay 0.250 -from [get_registers {*|u_gp_store|wdata_a_q* *|u_gp_store|wdata_b_q*}]
+
+# Bundled-data mailboxes across the asynchronous groups above. Each data bus
+# is held stable while its toggle passes a two-flop synchronizer, which adds
+# at least one destination clock. The clock groups cut path analysis for these
+# buses, including set_max_skew, so bound the routing of every net leaving the
+# data registers instead; set_net_delay is checked regardless of clock groups.
+# The limits leave most of the destination clock for the receiving
+# multiplexer and setup time.
+# ROM request address, clk_sys to clk_74a (13.468 ns).
+set_net_delay -max 5.0 -from [get_registers {*|game|rom|request_addr[*]}]
+# ROM read data, clk_74a to clk_sys (50 ns).
+set_net_delay -max 20.0 -from [get_registers {*|game|rom|response[*]}]
+# Audio sample, clk_sys to clk_74a.
+set_net_delay -max 5.0 -from [get_registers {*|game|sound|held[*]}]
+# Boot-time date and time, clk_74a to clk_sys; seeded after valid is synchronized.
+set_net_delay -max 20.0 -from [get_registers {*|icb|rtc_date_bcd[*] *|icb|rtc_time_bcd[*]}]

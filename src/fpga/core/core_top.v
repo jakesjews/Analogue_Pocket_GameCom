@@ -352,6 +352,7 @@ end
     wire            savestate_load_err;
     
     wire            osnotify_inmenu;
+    wire            osnotify_grayscale;
 
 // bridge target commands
 // synchronous to clk_74a
@@ -437,6 +438,7 @@ core_bridge_cmd icb (
     .savestate_load_err     ( savestate_load_err ),
 
     .osnotify_inmenu        ( osnotify_inmenu ),
+    .osnotify_grayscale     ( osnotify_grayscale ),
     
     .target_dataslot_read       ( target_dataslot_read ),
     .target_dataslot_write      ( target_dataslot_write ),
@@ -504,7 +506,7 @@ pocket_gamecom game (
     .state_start_ok(savestate_start_ok), .state_start_err(savestate_start_err),
     .state_load_ack(savestate_load_ack), .state_load_busy(savestate_load_busy),
     .state_load_ok(savestate_load_ok), .state_load_err(savestate_load_err),
-    .in_menu(osnotify_inmenu), .keys(cont1_key), .joy(cont1_joy),
+    .in_menu(osnotify_inmenu), .grayscale(osnotify_grayscale), .keys(cont1_key), .joy(cont1_joy),
     .video_rgb(video_rgb), .video_de(video_de), .video_skip(video_skip),
     .video_hs(video_hs), .video_vs(video_vs),
     .audio_mclk(audio_mclk), .audio_lrck(audio_lrck), .audio_dac(audio_dac),

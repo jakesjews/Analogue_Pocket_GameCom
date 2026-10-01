@@ -11,7 +11,7 @@ module pocket_gamecom (
     input wire state_start, input wire state_load,
     output wire state_start_ack, output wire state_start_busy, output wire state_start_ok, output wire state_start_err,
     output wire state_load_ack, output wire state_load_busy, output wire state_load_ok, output wire state_load_err,
-    input wire in_menu, input wire [31:0] keys, input wire [31:0] joy,
+    input wire in_menu, input wire grayscale, input wire [31:0] keys, input wire [31:0] joy,
     output wire [23:0] video_rgb, output wire video_de, output wire video_skip,
     output wire video_hs, output wire video_vs,
     output wire audio_mclk, output wire audio_lrck, output wire audio_dac,
@@ -42,6 +42,11 @@ module pocket_gamecom (
     reg [20:0] cart1_mask = 0, cart2_mask = 0;
     reg [1:0] palette = 0;
     reg [23:0] power_hold = 0, sound_hold = 0, reset_hold = 0;
+    // Registered copies of bridge-clock state that crosses to other clocks,
+    // so no combinational glitch can reach a synchronizer.
+    reg power_active = 0, sound_active = 0, reset_request = 1;
+    reg [1:0] display_palette = 0;
+    reg [3:0] stick = 0;
     wire cart_size_ok = slot_size >= 32768 && slot_size <= 2097152 &&
                        (slot_size & (slot_size-1)) == 0;
     assign slot_write_ok = ((slot_id == 0 || slot_id == 2) && cart_size_ok) ||
@@ -62,6 +67,14 @@ module pocket_gamecom (
                 default: ;
             endcase
         end
+        power_active <= power_hold != 0;
+        sound_active <= sound_hold != 0;
+        reset_request <= !reset_n || !setup_done || loading ||
+                         !bios_loaded || rom_overflow || reset_hold != 0;
+        // Grayscale LCD display modes require pure gray output.
+        display_palette <= grayscale ? 2'd2 : palette;
+        // Right stick past the thresholds: {right, left, down, up}.
+        stick <= {joy[23:16] > 192, joy[23:16] < 64, joy[31:24] > 192, joy[31:24] < 64};
         if (bridge_wr && bridge_addr[31:8] == 24'h400000) begin
             case (bridge_addr[7:0])
                 8'h00: palette <= bridge_wr_data[1:0];
@@ -80,22 +93,25 @@ module pocket_gamecom (
     wire bridge_save = bridge_addr[31:13] == 19'h18000;
     wire [22:0] load_addr = {1'b0, bridge_cart2, bridge_addr[20:0]};
 
-    wire reset_request = !reset_n || !setup_done || loading ||
-                         !bios_loaded || rom_overflow || reset_hold != 0;
     (* async_reg = "true" *) reg [2:0] reset_sync = 7;
     (* async_reg = "true" *) reg [1:0] menu_sync = 0;
-    reg [47:0] config_meta = 0, config_sync = 0;
-    reg [64:0] rtc_meta = 0, rtc_sync = 0;
-    wire [64:0] rtc_payload = {rtc_valid, 16'd0, rtc_date[23:0], rtc_time[23:0]};
+    // Configuration is a bus: take a new value only after two equal samples.
+    // It changes rarely (menu actions, or while the machine is in reset).
+    wire [45:0] config_bridge = {power_active, sound_active, cart_loaded, cart2_mask, cart1_mask};
+    (* async_reg = "true" *) reg [45:0] config_meta = 0;
+    reg [45:0] config_check = 0, config_last = 0, config_sync = 0;
     always @(posedge clk_sys) begin
         reset_sync <= {reset_sync[1:0], reset_request};
         menu_sync <= {menu_sync[0], in_menu};
-        config_meta <= {power_hold != 0, sound_hold != 0, palette,
-                        cart_loaded, cart2_mask, cart1_mask};
-        config_sync <= config_meta;
-        rtc_meta <= rtc_payload; rtc_sync <= rtc_meta;
+        config_meta <= config_bridge; config_check <= config_meta; config_last <= config_check;
+        if (config_check == config_last) config_sync <= config_last;
     end
     wire core_reset = reset_sync[2];
+    wire [64:0] rtc_now;
+    pocket_rtc clock (
+        .clk(clk_sys), .host_valid(rtc_valid), .host_date(rtc_date[23:0]),
+        .host_time(rtc_time[23:0]), .rtc(rtc_now)
+    );
     reg [1:0] phase = 0;
     always @(posedge clk_sys) phase <= phase + 1'b1;
     wire phi0 = phase == 0;
@@ -106,8 +122,8 @@ module pocket_gamecom (
     wire slot2 = slot2_sel && !slot1_sel;
     wire present = bios_sel || (slot1_sel && config_sync[42]) || (slot2 && config_sync[43]);
     wire [20:0] cart_mirrored = cart_addr & (slot2 ? config_sync[41:21] : config_sync[20:0]);
-    wire [22:0] physical_addr = bios_sel ? {5'b10000, cart_addr[17:0]} :
-                                           {1'b0, slot2, cart_mirrored};
+    // BIOS reads go to SRAM; only cartridge addresses reach PSRAM.
+    wire [22:0] physical_addr = {1'b0, slot2, cart_mirrored};
     wire rom_ready;
     wire [7:0] rom_data, bios_data;
     pocket_bios bios (
@@ -195,13 +211,15 @@ module pocket_gamecom (
     wire [3:0] touch_x, touch_y;
     pocket_input controls (
         .clk(clk_sys), .reset(core_reset), .in_menu(menu_sync[1]),
-        .keys(keys), .joy(joy), .power_press(config_sync[47]), .sound_press(config_sync[46]),
+        .keys(keys), .stick(stick), .power_press(config_sync[45]), .sound_press(config_sync[44]),
+        .stopped(cpu_stopped),
         .buttons(buttons), .touching(touching), .cursor_visible(cursor),
         .touch_x(touch_x), .touch_y(touch_y)
     );
     wire ce, hb, vb, hs, vs;
     wire [2:0] shade;
     wire [15:0] pcm;
+    wire cpu_stopped;
     GameCom #(.VIDEO_DIV(5), .DMA_ROM_WAIT(1'b1), .ENABLE_CHEATS(1'b0)) machine (
         .clk_sys(clk_sys), .phi0(phi0 && !state_pause), .phi1(phi1 && !state_pause), .clk_vid(clk_video),
         .reset(core_reset), .stop_disable_i(1'b0), .warm_boot_i(1'b0),
@@ -212,7 +230,7 @@ module pocket_gamecom (
         .buttons_i(buttons), .touch_active_i(touching), .touch_x_i(touch_x), .touch_y_i(touch_y),
         .video_60hz_i(1'b1), .palette_four_color_i(1'b0),
         .cursor_enable_i(cursor), .cursor_x_i(touch_x), .cursor_y_i(touch_y),
-        .save_din_i(save_q), .rtc_i(rtc_sync),
+        .save_din_i(save_q), .rtc_i(rtc_now),
         .savestate_pause_req_i(state_pause_req), .savestate_mem_active_i(state_mem_active && state_mem_type != 0),
         .savestate_mem_type_i(state_mem_type), .savestate_mem_addr_i(state_mem_addr),
         .savestate_mem_rd_i(state_mem_rd), .savestate_mem_wr_i(state_mem_wr),
@@ -222,11 +240,15 @@ module pocket_gamecom (
         .cart_wr_o(), .cart_slot1_sel_o(slot1_sel), .cart_slot2_sel_o(slot2_sel),
         .save_addr_o(save_addr), .save_dout_o(save_data), .save_rd_o(save_rd), .save_wren_o(save_wr),
         .cpu_sound_o(), .audio_pcm_o(pcm), .cpu_txdb_o(), .cpu_lcd_clk_o(),
-        .cpu_doffb_o(), .uart_rts_o(), .uart_dtr_o(),
+        .cpu_doffb_o(), .cpu_stopped_o(cpu_stopped), .uart_rts_o(), .uart_dtr_o(),
         .savestate_pause_ready_o(state_pause_ready), .savestate_mem_rdata_o(state_core_q)
     );
-    (* async_reg = "true" *) reg [1:0] palette_meta, palette_video;
-    always @(posedge clk_video) begin palette_meta <= palette; palette_video <= palette_meta; end
+    (* async_reg = "true" *) reg [1:0] palette_meta = 0;
+    reg [1:0] palette_check = 0, palette_last = 0, palette_video = 0;
+    always @(posedge clk_video) begin
+        palette_meta <= display_palette; palette_check <= palette_meta; palette_last <= palette_check;
+        if (palette_check == palette_last) palette_video <= palette_last;
+    end
     pocket_video display (
         .clk(clk_video), .reset(!pll_locked), .ce(ce), .hblank(hb), .vblank(vb),
         .hs(hs), .vs(vs), .shade(shade), .palette(palette_video),

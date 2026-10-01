@@ -1,4 +1,6 @@
 Game.com for Analogue Pocket
-Original FPGA core: Jamie Blanks
-L + D-pad: move touch cursor; R: touch.
+Original FPGA core: Jamie Blanks. Pocket port: Jacob Jewell.
+Needs the 256 KB external BIOS at Assets/gamecom/common/boot.rom.
+L + D-pad: move touch cursor; R or L + A: touch.
 Start: Pause. Select: Game.com Menu.
+When the Game.com is off, press A, B, X, Y or Start to turn it on.

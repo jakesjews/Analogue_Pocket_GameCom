@@ -61,6 +61,7 @@ input   wire    [31:0]  savestate_size,
 input   wire    [31:0]  savestate_maxloadsize,
 
 output  reg             osnotify_inmenu,
+output  reg             osnotify_grayscale,     // display mode requires grayscale video
 
 output  reg             savestate_start,        // core should detect rising edge on this,
 input   wire            savestate_start_ack,    // and then assert ack for at least 1 cycle
@@ -196,6 +197,7 @@ initial begin
     savestate_start <= 0;
     savestate_load <= 0;
     osnotify_inmenu <= 0;
+    osnotify_grayscale <= 0;
     
     status_setup_done_queue <= 0;
     target_dataslot_read_queue <= 0;
@@ -446,6 +448,13 @@ always @(posedge clk) begin
         16'h00B0: begin
             // OS Notify: Menu State
             osnotify_inmenu <= host_20[0];
+            hstate <= ST_DONE_OK;
+        end
+        16'h00B8: begin
+            // OS Notify: Display Mode. Grayscale LCD modes are only enabled
+            // when the core answers 444D to confirm grayscale output.
+            osnotify_grayscale <= host_20[0];
+            host_40 <= host_20[0] ? 32'h0000444D : 32'h0;
             hstate <= ST_DONE_OK;
         end
         default: begin
