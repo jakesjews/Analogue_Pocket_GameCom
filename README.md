@@ -44,7 +44,7 @@ The Pocket's Core Settings menu has the screen palette, the Game.com's Power and
 ## Status
 
 - Checked on a Pocket, in version 0.1.3: the core starts, shows the Game.com menu, loads cartridges and the save, and games have clean graphics and sound. Motion looked jerky.
-- Checked in simulation only so far: Memories, the LCD display modes, the second cartridge slot, the organizer clock, turning the Game.com back on with the buttons, and the frame pacing and cartridge speed changes made since 0.1.3.
+- Checked in simulation only so far: Memories, the LCD display modes, the second cartridge slot, the organizer clock, turning the Game.com back on with the buttons, the Core Settings options (they had no effect on a Pocket before 0.2.2), and the frame pacing and cartridge speed changes made since 0.1.3.
 
 ## Troubleshooting
 

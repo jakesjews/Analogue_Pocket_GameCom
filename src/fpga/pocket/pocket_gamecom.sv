@@ -47,6 +47,13 @@ module pocket_gamecom (
     reg power_active = 0, sound_active = 0, reset_request = 1;
     reg [1:0] display_palette = 0;
     reg [3:0] stick = 0;
+    // The bridge runs little endian so that file bytes arrive in order. That
+    // byte-swaps the numbers the Pocket writes to and reads from registers,
+    // such as the Core Settings values, so those are swapped back here.
+    function [31:0] host_word(input [31:0] word);
+        host_word = {word[7:0], word[15:8], word[23:16], word[31:24]};
+    endfunction
+    wire [31:0] register_wr_data = host_word(bridge_wr_data);
     wire cart_size_ok = slot_size >= 32768 && slot_size <= 2097152 &&
                        (slot_size & (slot_size-1)) == 0;
     assign slot_write_ok = ((slot_id == 0 || slot_id == 2) && cart_size_ok) ||
@@ -77,11 +84,11 @@ module pocket_gamecom (
         stick <= {joy[23:16] > 192, joy[23:16] < 64, joy[31:24] > 192, joy[31:24] < 64};
         if (bridge_wr && bridge_addr[31:8] == 24'h400000) begin
             case (bridge_addr[7:0])
-                8'h00: palette <= bridge_wr_data[1:0];
-                8'h04: if (bridge_wr_data[0]) power_hold <= 24'd7425000;
-                8'h08: if (bridge_wr_data[0]) sound_hold <= 24'd7425000;
-                8'h0c: if (bridge_wr_data[0]) reset_hold <= 24'd74250;
-                8'h10: if (bridge_wr_data[0]) begin cart_loaded[1] <= 0; reset_hold <= 74250; end
+                8'h00: palette <= register_wr_data[1:0];
+                8'h04: if (register_wr_data[0]) power_hold <= 24'd7425000;
+                8'h08: if (register_wr_data[0]) sound_hold <= 24'd7425000;
+                8'h0c: if (register_wr_data[0]) reset_hold <= 24'd74250;
+                8'h10: if (register_wr_data[0]) begin cart_loaded[1] <= 0; reset_hold <= 74250; end
                 default: ;
             endcase
         end
@@ -174,10 +181,10 @@ module pocket_gamecom (
         if (last_read_addr[31:28] == 5) bridge_rd_data = state_bridge_q;
         if (last_read_addr[31:8] == 24'h400000) begin
             case (last_read_addr[7:0])
-                8'h00: bridge_rd_data = {30'd0, palette};
-                8'h20: bridge_rd_data = {24'd0, 1'b0, core_reset, rom_overflow,
-                                        loading, rom_idle, bios_loaded, cart_loaded};
-                8'h24: bridge_rd_data = 32'h47434f4d;
+                8'h00: bridge_rd_data = host_word({30'd0, palette});
+                8'h20: bridge_rd_data = host_word({24'd0, 1'b0, core_reset, rom_overflow,
+                                                  loading, rom_idle, bios_loaded, cart_loaded});
+                8'h24: bridge_rd_data = host_word(32'h47434f4d);
                 default: ;
             endcase
         end

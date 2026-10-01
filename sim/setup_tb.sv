@@ -83,10 +83,29 @@ module setup_tb;
         command(16'h00b8, 0);
         repeat (4) @(negedge clk);
         if (dut.game.display_palette != 0) $fatal(1, "Color display mode kept gray output");
-        // The menu's Game.com Power action reaches the key matrix on clk_sys.
-        host_write(32'h40000004, 32'h01000000);
+        // Core Settings values. host_write sends numbers as the Pocket does on
+        // the little-endian bridge, byte-swapped, so the value 1 is the raw
+        // word 01000000. Each option must act on the number, not on raw bit 0.
+        host_write(32'h40000000, 32'h2);
+        if (dut.game.palette != 2) $fatal(1, "LCD Palette was not set");
+        host_read(32'h40000000, result);
+        if (result != 32'h2) $fatal(1, "LCD Palette read back as %08x", result);
+        host_write(32'h40000000, 32'h0);
+        if (dut.game.palette != 0) $fatal(1, "LCD Palette was not restored");
+        host_write(32'h40000004, 32'h1);
         #2000;
         if (!dut.game.config_sync[45] || !dut.game.buttons[11]) $fatal(1, "Power action did not reach the Game.com");
+        host_write(32'h40000008, 32'h1);
+        #2000;
+        if (!dut.game.config_sync[44] || !dut.game.buttons[5]) $fatal(1, "Sound action did not reach the Game.com");
+        // A number without bit 0 set must not trigger an action, even though
+        // its raw word has bit 0 set.
+        host_write(32'h4000000c, 32'h01000000);
+        if (dut.game.reset_hold != 0) $fatal(1, "Cold Reset fired on a value of 0x01000000");
+        host_write(32'h4000000c, 32'h1);
+        if (dut.game.reset_hold == 0) $fatal(1, "Cold Reset did not start");
+        wait (dut.game.core_reset);
+        wait (!dut.game.core_reset);
         // Reject the CURRENT invalid request, then accept a following valid one.
         slot(99, 8192, 2);
         slot(2, 32768, 0);
@@ -96,10 +115,13 @@ module setup_tb;
         slot(0, 1048576, 0);
         slot(3, 0, 2);
         slot(3, 8192, 0);
+        if (!dut.game.cart_loaded[1]) $fatal(1, "Cartridge 2 was not marked loaded");
+        host_write(32'h40000010, 32'h1);
+        if (dut.game.cart_loaded[1]) $fatal(1, "Eject Cartridge 2 did not eject");
         command(16'h008f, 0);
         command(16'h0010, 0);
         if (dut.reset_n) $fatal(1, "Host reset enter was not applied");
-        $display("PASS: actual core_top APF setup, slot acceptance/rejection, ready notification, reset commands, Memories in reset, display modes, Power action");
+        $display("PASS: actual core_top APF setup, slot acceptance/rejection, ready notification, reset commands, Memories in reset, display modes, Core Settings options");
         $finish;
     end
     initial begin #10000000; $fatal(1, "Setup test timed out"); end
