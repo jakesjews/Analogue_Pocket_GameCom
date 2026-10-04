@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Kitrinx
+// Copyright (c) 2026 Jamie Blanks
 
 module sm8521_sound (
 	input wire clk_sys_i,

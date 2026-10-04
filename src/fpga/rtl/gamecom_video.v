@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Kitrinx
+// Copyright (c) 2026 Jamie Blanks
 
 module gamecom_video #(parameter TV60_DIV = 10)
 (
