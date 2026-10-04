@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Jamie Blanks
+// Copyright (c) 2026 Kitrinx
 
 module sm8521_boot_rom
 (

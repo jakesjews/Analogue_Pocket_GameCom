@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Jamie Blanks
+// Copyright (c) 2026 Kitrinx
 
 //============================================================================
 // Game.com MiSTer byte-wide cheat engine

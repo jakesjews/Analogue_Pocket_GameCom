@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Jamie Blanks
+// Copyright (c) 2026 Kitrinx
 
 module GameCom #(parameter VIDEO_DIV = 10, parameter DMA_ROM_WAIT = 1'b0, parameter ENABLE_CHEATS = 1'b1)
 (

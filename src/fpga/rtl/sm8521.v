@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Jamie Blanks
+// Copyright (c) 2026 Kitrinx
 
 //============================================================================
 // Sharp SM8521 - the Game.com's CPU, with its on-chip DMA blitter, LCDC,

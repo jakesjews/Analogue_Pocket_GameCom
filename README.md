@@ -1,8 +1,8 @@
 # Game.com for Analogue Pocket
 
-This openFPGA core runs Tiger Game.com cartridge images on the Analogue Pocket. It starts in the Game.com's own menu, and you work its touch screen with a cursor moved by the D-pad. It is a port of [Jamie Blanks' Game.com core for MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer) and is still in development.
+This openFPGA core runs Tiger Game.com cartridge images on the Analogue Pocket. It starts in the Game.com's own menu, and you work its touch screen with a cursor moved by the D-pad. It is a port of [Kitrinx's Game.com core for MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer) and is still in development.
 
-**This port was developed with AI.** The Pocket integration, testbenches, build scripts and documentation were written by AI coding agents, including Anthropic's Claude, directed by Jacob Jewell, who tests the core on a real Analogue Pocket. The platform image and core icon were generated with OpenAI's image model through the Codex CLI. The Game.com emulation itself is Jamie Blanks' MiSTer core.
+**This port was developed with AI.**
 
 ## What you need
 
@@ -58,15 +58,11 @@ How the port works, how to build and test it, and the record of what has been ch
 
 This port is built from the following work. Upstream copyright and license headers are kept in each file.
 
-- **Game.com core** (`src/fpga/rtl/`): Jamie Blanks, [MiSTer-devel/GameCom_MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer) at commit `96ed90ec865302d5eb5a0aa8336844dbfb4a5342`. GPL-2.0, from the upstream `LICENSE`. Three files are modified for the Pocket; `docs/PORT.md` lists the changes.
-- **Cheat engine** (`src/fpga/rtl/gamecom_cheat_engine.sv`, included but disabled): Jamie Blanks, following the MiSTer cheat-engine convention by Kitrinx. GPL-2.0.
+- **Game.com core** (`src/fpga/rtl/`): Kitrinx, [MiSTer-devel/GameCom_MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer) at commit `96ed90ec865302d5eb5a0aa8336844dbfb4a5342`. GPL-2.0, from the upstream `LICENSE`. Three files are modified for the Pocket; `docs/PORT.md` lists the changes.
+- **Cheat engine** (`src/fpga/rtl/gamecom_cheat_engine.sv`, included but disabled): Kitrinx, following the MiSTer cheat-engine convention. GPL-2.0.
 - **Block RAM wrapper** (`src/fpga/rtl/Mem/bram.vhd`): a common MiSTer project file with no author recorded, shipped with GameCom_MiSTer. GPL-2.0.
 - **PSRAM controller** (`src/fpga/pocket/psram.sv`, unmodified): Adam Gastineau, [agg23/openfpga-SNES](https://github.com/agg23/openfpga-SNES) at commit `ad9fed4e9cbeee56f624ffcffc6477b2908daa3d`. MIT; the notice is kept in the file.
 - **openFPGA framework and core template** (`src/fpga/apf/`, `src/fpga/core/core_bridge_cmd.v`, and the template base of `core_top.v`, `core_constraints.sdc`, `ap_core.qpf` and `ap_core.qsf`): Analogue, [open-fpga/core-template](https://github.com/open-fpga/core-template). Analogue's template terms; its notice is kept in `docs/ANALOGUE_NOTICE.md`.
 - **Quartus-generated IP and build-ID script** (`src/fpga/apf/mf_*`, `src/fpga/apf/build_id_gen.tcl`): Intel (Altera), supplied with the core template. Intel's license is in each file's header.
-- **Pocket integration, test benches and scripts** (`src/fpga/pocket/` except `psram.sv`, the Pocket changes in `src/fpga/core/`, `sim/`, `scripts/`): Jacob Jewell, written with AI coding agents. GPL-2.0-or-later.
-- **Platform image and core icon** (`dist/art/`, `dist/icon.bin`, `dist/platforms/_images/gamecom.bin`): generated with OpenAI's image model through the Codex CLI. GPL-2.0-or-later.
-
-The upstream core's comments cite [MAME](https://github.com/mamedev/mame)'s Game.com (SM8500) driver as a hardware-behavior reference. No MAME code is included.
 
 The combined work is distributed under the GNU General Public License, version 2; see [LICENSE](LICENSE). The BIOS and cartridge images are not included and are not covered by this license.
