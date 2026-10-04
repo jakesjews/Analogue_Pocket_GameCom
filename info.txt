@@ -1,5 +1,5 @@
 Game.com for Analogue Pocket
-Original FPGA core: Kitrinx. Pocket port: Jacob Jewell.
+Original FPGA core: Kitrinx. Pocket port: jakesjews.
 Needs the 256 KB external BIOS at Assets/gamecom/common/boot.rom.
 L + D-pad: move touch cursor; R or L + A: touch.
 Start: Pause. Select: Game.com Menu.

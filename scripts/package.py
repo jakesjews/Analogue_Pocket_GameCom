@@ -8,7 +8,7 @@ import shutil
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE = "jacob.GameCom"
+CORE = "jakesjews.GameCom"
 
 
 def source_digest():

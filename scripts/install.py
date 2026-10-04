@@ -26,7 +26,7 @@ def install():
     if not (args.volume / "Cores").is_dir() or not (args.volume / "Assets").is_dir():
         raise SystemExit("Not an existing Pocket SD card")
     release = ROOT / "release"
-    if not (release / "Cores/jacob.GameCom/build.json").exists():
+    if not (release / "Cores/jakesjews.GameCom/build.json").exists():
         raise SystemExit("Build and package first")
     backup_root = ROOT / "build/sd-backup" / str(time.time_ns())
     for group in ("Cores", "Platforms"):
@@ -68,7 +68,7 @@ def install():
             if source.stat().st_size != 8192:
                 raise SystemExit("Console save must be exactly 8192 bytes")
             write_new_verified(save, source.read_bytes())
-    print(f"Installed and verified {args.volume / 'Cores/jacob.GameCom'}")
+    print(f"Installed and verified {args.volume / 'Cores/jakesjews.GameCom'}")
 
 
 if __name__ == "__main__":
