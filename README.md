@@ -1,6 +1,6 @@
 # Game.com for Analogue Pocket
 
-This openFPGA core runs Tiger Game.com cartridge images on the Analogue Pocket. It starts in the Game.com's own menu, and you work its touch screen with a cursor moved by the D-pad. It is a port of [Kitrinx's Game.com core for MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer) and is still in development.
+This openFPGA core runs Tiger Game.com cartridge images on the Analogue Pocket. It starts in the Game.com's own menu, and you work its touch screen with a cursor moved by the D-pad. It is a port of [Kitrinx's Game.com core for MiSTer](https://github.com/MiSTer-devel/GameCom_MiSTer).
 
 **This port was developed with AI.**
 
@@ -40,11 +40,6 @@ The Pocket's Core Settings menu has the screen palette, the Game.com's Power and
 - **All games share one save, as on the real console, and loading a Memory restores it too.** An old Memory puts every game's saves back to the moment it was made.
 - `boot.rom` must be the 256 KB external BIOS. The 4 KB internal BIOS does not work in its place.
 - Sleep, cheats and the Game.com's modem and link features are not supported.
-
-## Status
-
-- Checked on a Pocket, in version 0.1.3: the core starts, shows the Game.com menu, loads cartridges and the save, and games have clean graphics and sound. Motion looked jerky.
-- Checked in simulation only so far: Memories, the LCD display modes, the second cartridge slot, the organizer clock, turning the Game.com back on with the buttons, the Core Settings options (they had no effect on a Pocket before 0.2.2), and the frame pacing and cartridge speed changes made since 0.1.3.
 
 ## Troubleshooting
 

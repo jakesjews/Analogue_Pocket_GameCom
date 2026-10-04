@@ -25,7 +25,7 @@ set_max_delay 8.0 -from [get_ports {cram0_dq[*]}] -to [get_registers {*|rom|memo
 # hold requirement on every register-to-RAM input of the GP store. The guard
 # band applies in the Fitter only: sign-off timing analysis checks the real
 # hold requirement. As an SDC requirement it only passed when the router
-# happened to overshoot (it failed first fits of 0.1.3, 0.2.0 and 0.2.1).
+# happened to overshoot.
 if {$::quartus(nameofexecutable) eq "quartus_fit"} {
     set_min_delay 0.300 -from [get_registers {*|u_gp_store|wdata_a_q* *|u_gp_store|wdata_b_q* *|u_gp_store|wren_a_q* *|u_gp_store|wren_b_q* *|u_gp_store|addr_a_q* *|u_gp_store|addr_b_q*}]
 }
