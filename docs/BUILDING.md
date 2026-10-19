@@ -3,6 +3,7 @@
 ## Requirements
 
 - Quartus Prime Lite 18.1 with Cyclone V support. A native `quartus_sh` on `PATH` is used if present; otherwise the build script runs Quartus in CrossOver's `Quartus` bottle on macOS. `CX_WINE`, `QUARTUS_BOTTLE` and `QUARTUS_EXE` override the paths.
+- **Under CrossOver, keep JTAG debug features out of the design.** The memory editor, SignalTap and virtual JTAG add a JTAG hub. When saving the hub, the fitter checks each folder of the project path without its drive letter, and Wine reads such paths as Mac paths. For a project under `~/dev` the first one is the Mac's `/dev`, which crashes CrossOver's Wine server and leaves the fitter waiting forever.
 - Verilator for the simulation benches.
 - Python 3. `scripts/make_images.py` also needs Pillow.
 

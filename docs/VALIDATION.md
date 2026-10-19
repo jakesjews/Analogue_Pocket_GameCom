@@ -60,8 +60,8 @@ Not covered:
 
 Quartus Prime Lite 18.1.0 Build 625, device 5CEBA4F23C8. Resource use is in the [resource audit](RESOURCE_AUDIT.md).
 
-- All 80 constrained timing groups pass across the four voltage and temperature models. Minimum slack: setup 0.467 ns, hold 0.099 ns, recovery 29.688 ns, removal 0.223 ns, pulse width 0.833 ns.
-- The four mailbox net-delay bounds pass: ROM request address 3.494 ns of 5 ns, audio sample 1.480 ns of 5 ns, ROM data 2.927 ns of 20 ns, boot date and time 2.685 ns of 20 ns.
-- Quartus's metastability report finds 135 synchronizer chains, including the link port's SI input and its status bit, and a worst-case design MTBF of at least 1e9 years, with 9.8 ns worst available settling time. It could not calculate an MTBF for about a third of the chains.
+- All 60 constrained timing groups pass across the four voltage and temperature models. Minimum slack: setup 0.430 ns, hold 0.117 ns, pulse width 0.833 ns.
+- The four mailbox net-delay bounds pass: ROM request address 3.036 ns of 5 ns, audio sample 1.481 ns of 5 ns, ROM data 3.413 ns of 20 ns, boot date and time 2.404 ns of 20 ns.
+- Quartus's metastability report finds 135 synchronizer chains, including the link port's SI input and its status bit, and a worst-case design MTBF of at least 1e9 years, with 9.5 ns worst available settling time. It could not calculate an MTBF for about a third of the chains.
 - There are no illegal or unconstrained clocks. The link port pins are false paths. The APF bridge, scaler and audio interfaces and some memory hold paths have no external I/O constraints, so passing these checks is not board-level timing sign-off.
 - The release zip contains only `Assets/gamecom/common/`, `Cores/jakesjews.GameCom/` and `Platforms/`. Nothing is placed at the SD card root.

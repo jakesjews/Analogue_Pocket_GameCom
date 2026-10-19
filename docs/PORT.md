@@ -139,11 +139,12 @@ The CPU's STOP state is brought out of the upstream board as `cpu_stopped_o`. Wh
 
 ## Changes to upstream code
 
-Three upstream files are modified; the other upstream files in `src/fpga/rtl/` are byte-identical to GameCom_MiSTer commit `96ed90ec865302d5eb5a0aa8336844dbfb4a5342`.
+Four upstream files are modified; the other upstream files in `src/fpga/rtl/` are byte-identical to GameCom_MiSTer commit `96ed90ec865302d5eb5a0aa8336844dbfb4a5342`.
 
 - `gamecom.v` passes three new parameters (`VIDEO_DIV`, `DMA_ROM_WAIT`, `ENABLE_CHEATS`) down to the CPU and video blocks. Their defaults preserve upstream behavior. It also exposes the CPU's STOP state as `cpu_stopped_o`.
 - `sm8521.v` adds the optional DMA ROM-ready waits (`DMA_ROM_WAIT`) and lets the cheat engine be compiled out (`ENABLE_CHEATS`).
 - `gamecom_video.v` parameterizes the buffered video divider (30 MHz / 5 on Pocket instead of 60 MHz / 10) and replaces the two-buffer handoff with three framebuffers. The three-framebuffer change is not behind a parameter.
+- `Mem/bram.vhd` turns off In-System Memory Content Editor access to its single-port RAM. Nothing uses that access, and the JTAG hub it adds made the Quartus 18.1 fitter crash CrossOver's Wine server; see [Building](BUILDING.md).
 
 ## Reference specifications
 
