@@ -9,7 +9,7 @@
 ## Simulation
 
 ```sh
-for tb in rom_tb bios_tb io_tb state_tb rtc_tb setup_tb dma_tb video_cadence_tb; do
+for tb in rom_tb bios_tb io_tb state_tb rtc_tb setup_tb dma_tb video_cadence_tb link_tb serial_tb; do
     bash sim/run.sh $tb
 done
 bash sim/run.sh boot_tb +BIOS=/absolute/path/boot.rom +CART=/absolute/path/game.tgc

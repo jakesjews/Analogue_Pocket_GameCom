@@ -249,10 +249,12 @@ assign cart_pin30_pwroff_reset = 1'b0;  // hardware can control this
 assign cart_tran_pin31 = 1'bz;      // input
 assign cart_tran_pin31_dir = 1'b0;  // input
 
-// link port is unused, set to input only to be safe
-// each bit may be bidirectional in some applications
-assign port_tran_so = 1'bz;
-assign port_tran_so_dir = 1'b0;     // SO is output only
+// link port: the Game.com serial port leaves on SO and arrives on SI as
+// framed streams (pocket_link.sv). A Game Boy link cable crosses the two.
+// SCK and SD are not used and stay inputs.
+wire link_so;
+assign port_tran_so = link_so;
+assign port_tran_so_dir = 1'b1;     // SO is output only
 assign port_tran_si = 1'bz;
 assign port_tran_si_dir = 1'b0;     // SI is input only
 assign port_tran_sck = 1'bz;
@@ -516,6 +518,7 @@ pocket_gamecom game (
     .cram_oe_n(cram0_oe_n), .cram_we_n(cram0_we_n),
     .cram_ub_n(cram0_ub_n), .cram_lb_n(cram0_lb_n),
     .sram_a(sram_a), .sram_dq(sram_dq), .sram_oe_n(sram_oe_n), .sram_we_n(sram_we_n),
-    .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n)
+    .sram_ub_n(sram_ub_n), .sram_lb_n(sram_lb_n),
+    .link_so(link_so), .link_si(port_tran_si)
 );
 endmodule

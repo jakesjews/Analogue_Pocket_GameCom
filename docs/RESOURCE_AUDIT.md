@@ -1,6 +1,6 @@
 # FPGA resource use
 
-The fit uses 16,695 of 18,480 ALMs (90%), 5,962 flip-flops, 169 of 308 M10K blocks and 1,320,960 block-RAM bits. No memory is built from MLABs or logic cells.
+The fit uses 16,840 of 18,480 ALMs (91%), 6,015 flip-flops, 169 of 308 M10K blocks and 1,320,960 block-RAM bits. No memory is built from MLABs or logic cells.
 
 ## Block RAM
 

@@ -1,6 +1,6 @@
 # Port architecture
 
-The Game.com itself (SM8521 CPU, board, sound and LCD) is the upstream MiSTer RTL. The MiSTer `emu` wrapper, HPS I/O, DDR3 save-state storage, scandoubler, SDRAM controller, UART routing and OS menu are replaced by the Analogue template's `core_top` and the adapters in `src/fpga/pocket/`.
+The Game.com itself (SM8521 CPU, board, sound and LCD) is the upstream MiSTer RTL. The MiSTer `emu` wrapper, HPS I/O, DDR3 save-state storage, scandoubler, SDRAM controller, UART routing and OS menu are replaced by the Analogue template's `core_top` and the adapters in `src/fpga/pocket/`. The serial port goes to the Pocket's link port instead of MiSTer's UART.
 
 ## Clocks
 
@@ -21,7 +21,7 @@ The Game.com itself (SM8521 CPU, board, sound and LCD) is the upstream MiSTer RT
 | `40000008` | Sound button pulse | Register |
 | `4000000c` | Cold reset | Register |
 | `40000010` | Eject slot 2 and reset | Register |
-| `40000020` | Loader/core status | Register |
+| `40000020` | Loader/core status; bit 7 is set while a link partner is detected | Register |
 | `40000024` | Signature `47434f4d` | Register |
 | `50000000–5000691f` | Pocket Memories buffer | FPGA RAM, 32 KB |
 | `f8xxxxxx` | Framework commands | APF |
@@ -101,6 +101,20 @@ A Memory is a 26,912-byte blob: a 32-byte versioned header, 8 KB console RAM, 25
 - APF transfers the restore blob before issuing its load command. Invalid headers and truncated or out-of-order transfers fail before any machine memory changes.
 - APF holds each Memories request until it is acknowledged and processes no other host command meanwhile, so every request gets an answer: one that arrives during an operation is served afterwards, and one that arrives while the machine is held in reset is refused with an error.
 - Restore-blob tracking follows only APF's writes, so a blob written during reset still restores later.
+
+## Link cable
+
+The Game.com's serial port is the SM8521 UART (TXD and RXD) plus four handshake lines on port 3: DTR on P3.0 and RTS on P3.1 as outputs, CTS on P3.2 and DSR on P3.3 as inputs. The Compete.com cable was a null modem that crossed all three pairs, so a game may use the handshakes, not only the data lines. A Game Boy link cable crosses only SO and SI, with SCK and SD straight through and no pull-ups to rely on, so `pocket_link` carries all three outputs on SO as a continuous stream of 8-bit frames at 2 Mbps and decodes the partner's stream from SI:
+
+```
+start 0 | TXD | RTS | DTR | even parity | stop 1 | idle 1 | idle 1
+```
+
+- A frame takes 4 µs. A serial edge reaches the other Game.com between about 3 and 7 µs late, and the 4 µs of jitter is inside the half bit that the SM8521 receiver tolerates at its fastest rate, 78,125 baud with 12.8 µs bits.
+- The receiver accepts a start edge only after at least 2.5 bit times of high line. A real start always follows the stop and two idle bits, while no edge inside a frame follows more than two high bits, so the receiver cannot lock onto the wrong edge. A frame counts only if its start, parity and stop bits check.
+- Eight good frames in a row connect the link; 16 frame periods (64 µs) without one disconnect it. While disconnected, RXD, CTS and DSR read high, as on a console with nothing plugged in. Noise on an unplugged port, or a Game Boy core's serial traffic, is not accepted as a partner.
+- SO is driven straight from a 20 MHz register and SI goes through a two-flop synchronizer. The transmitter keeps running through reset, so a partner that is loading or paused still looks connected. SCK and SD stay inputs, and `core.json` declares the link port in use.
+- The frame format is specific to this core: a Pocket links only to another Pocket running it, not to a real Game.com or to MiSTer.
 
 ## Clock and power
 

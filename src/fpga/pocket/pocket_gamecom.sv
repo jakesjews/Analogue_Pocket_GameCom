@@ -22,7 +22,8 @@ module pocket_gamecom (
     output wire cram_ub_n, output wire cram_lb_n,
     output wire [16:0] sram_a, inout wire [15:0] sram_dq,
     output wire sram_oe_n, output wire sram_we_n,
-    output wire sram_ub_n, output wire sram_lb_n
+    output wire sram_ub_n, output wire sram_lb_n,
+    output wire link_so, input wire link_si
 );
     // Power-up recovery is independent of host reset; assets arrive while
     // reset_n is low. Allow 1 ms for PSRAM initialization before APF setup.
@@ -47,6 +48,7 @@ module pocket_gamecom (
     reg power_active = 0, sound_active = 0, reset_request = 1;
     reg [1:0] display_palette = 0;
     reg [3:0] stick = 0;
+    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] linked_sync = 0;
     // The bridge runs little endian so that file bytes arrive in order. That
     // byte-swaps the numbers the Pocket writes to and reads from registers,
     // such as the Core Settings values, so those are swapped back here.
@@ -80,6 +82,7 @@ module pocket_gamecom (
                          !bios_loaded || rom_overflow || reset_hold != 0;
         // Grayscale LCD display modes require pure gray output.
         display_palette <= grayscale ? 2'd2 : palette;
+        linked_sync <= {linked_sync[0], linked};
         // Right stick past the thresholds: {right, left, down, up}.
         stick <= {joy[23:16] > 192, joy[23:16] < 64, joy[31:24] > 192, joy[31:24] < 64};
         if (bridge_wr && bridge_addr[31:8] == 24'h400000) begin
@@ -182,7 +185,7 @@ module pocket_gamecom (
         if (last_read_addr[31:8] == 24'h400000) begin
             case (last_read_addr[7:0])
                 8'h00: bridge_rd_data = host_word({30'd0, palette});
-                8'h20: bridge_rd_data = host_word({24'd0, 1'b0, core_reset, rom_overflow,
+                8'h20: bridge_rd_data = host_word({24'd0, linked_sync[1], core_reset, rom_overflow,
                                                   loading, rom_idle, bios_loaded, cart_loaded});
                 8'h24: bridge_rd_data = host_word(32'h47434f4d);
                 default: ;
@@ -227,13 +230,22 @@ module pocket_gamecom (
     wire [2:0] shade;
     wire [15:0] pcm;
     wire cpu_stopped;
+    // The serial port's three outputs and three inputs cross the link cable
+    // as framed streams; see pocket_link.sv. The transmitter keeps running
+    // through reset so the other Pocket keeps seeing a connected console.
+    wire txd, rts, dtr, rxd, cts, dsr, linked;
+    pocket_link link (
+        .clk(clk_sys), .reset(power_reset),
+        .txd(txd), .rts(rts), .dtr(dtr), .rxd(rxd), .cts(cts), .dsr(dsr),
+        .linked(linked), .so(link_so), .si(link_si)
+    );
     GameCom #(.VIDEO_DIV(5), .DMA_ROM_WAIT(1'b1), .ENABLE_CHEATS(1'b0)) machine (
         .clk_sys(clk_sys), .phi0(phi0 && !state_pause), .phi1(phi1 && !state_pause), .clk_vid(clk_video),
         .reset(core_reset), .stop_disable_i(1'b0), .warm_boot_i(1'b0),
         .video_reset_i(!pll_locked),
         .cart_din_i(bios_sel ? bios_data : (present ? rom_data : 8'hff)),
         .rom_read_ready_i(bios_sel || !present || rom_ready),
-        .uart_rxd_i(1'b1), .uart_cts_i(1'b1), .uart_dsr_i(1'b1),
+        .uart_rxd_i(rxd), .uart_cts_i(cts), .uart_dsr_i(dsr),
         .buttons_i(buttons), .touch_active_i(touching), .touch_x_i(touch_x), .touch_y_i(touch_y),
         .video_60hz_i(1'b1), .palette_four_color_i(1'b0),
         .cursor_enable_i(cursor), .cursor_x_i(touch_x), .cursor_y_i(touch_y),
@@ -246,8 +258,8 @@ module pocket_gamecom (
         .cart_addr_o(cart_addr), .cart_dout_o(), .cart_doe_o(), .cart_rd_o(cart_rd),
         .cart_wr_o(), .cart_slot1_sel_o(slot1_sel), .cart_slot2_sel_o(slot2_sel),
         .save_addr_o(save_addr), .save_dout_o(save_data), .save_rd_o(save_rd), .save_wren_o(save_wr),
-        .cpu_sound_o(), .audio_pcm_o(pcm), .cpu_txdb_o(), .cpu_lcd_clk_o(),
-        .cpu_doffb_o(), .cpu_stopped_o(cpu_stopped), .uart_rts_o(), .uart_dtr_o(),
+        .cpu_sound_o(), .audio_pcm_o(pcm), .cpu_txdb_o(txd), .cpu_lcd_clk_o(),
+        .cpu_doffb_o(), .cpu_stopped_o(cpu_stopped), .uart_rts_o(rts), .uart_dtr_o(dtr),
         .savestate_pause_ready_o(state_pause_ready), .savestate_mem_rdata_o(state_core_q)
     );
     (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] palette_meta = 0;

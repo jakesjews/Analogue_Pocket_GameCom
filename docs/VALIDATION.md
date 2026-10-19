@@ -10,7 +10,7 @@ JTAG loading is the exception: openFPGALoader found the USB-Blaster (`09fb:6001`
 
 ## Simulation benches
 
-All eight pass on the current sources (Verilator 5.052). `setup_tb` runs the real `core_top` and `core_bridge_cmd` with the PLL and data-table RAM modeled; the others drive the Pocket adapters or the upstream machine directly.
+All ten pass on the current sources (Verilator 5.052). `setup_tb` runs the real `core_top` and `core_bridge_cmd` with the PLL and data-table RAM modeled; the others drive the Pocket adapters or the upstream machine directly.
 
 - `rom_tb`, cartridge loading and reads:
   - Two bursts totaling 1200 words cross the loader FIFO's wrap boundary into the PSRAM pin model without overflow and read back byte by byte, in both cartridge slots.
@@ -33,6 +33,8 @@ All eight pass on the current sources (Verilator 5.052). `setup_tb` runs the rea
 - `dma_tb`: 13 transfers through the real CPU DMA, board decoding and VRAM, with all 8192 destination bytes compared against an independent pixel-copy model.
   - Cases: immediate and delayed ROM, aligned prefetch, all three unaligned source and destination phases, partial pixels, reverse X, multiple rows, VRAM-to-VRAM, RAM-to-VRAM and VRAM-to-RAM.
   - Waits covered: 120 initial-read beats, 394 next-byte beats and 120 overlapped-prefetch beats.
+- `link_tb`: two link transports on clocks 100 ppm apart, joined as by a cable. Unplugged, the port reads idle. Plugged in, both sides link in 31 µs, RTS and DTR cross to the other side's CTS and DSR, and 64 random bytes each way at 78,125 baud arrive intact while both sides send at once; every serial edge arrives between 2.82 and 6.84 µs late. Unplugging mid-stream returns the port to idle in 65 µs. Random noise with 50 ns to 2 µs between edges and a 512 kHz Game Boy Color stream are both rejected for milliseconds, and plugging back in relinks.
+- `serial_tb`: two complete Game.coms, each running a small SM8521 program through the real CPU, board and UART, joined through two link transports. One asserts RTS, waits for CTS, sends 256 bytes at 78,125 baud and reads back each echo; the other waits for CTS, asserts RTS, echoes every byte and halts when DTR drops. Both halt with all 256 bytes correct in each direction and no parity, framing or overrun status.
 - `video_cadence_tb`: every native frame is numbered and every pixel carries its frame and coordinates, so mixed frames, wrong pixel order and incomplete 200 × 160 images are rejected.
   - In one second after warm-up, all 76 native frames are captured and all 60 output frames are new, with none repeated. The displayed frame number advances by one 45 times and by two 15 times.
   - Pausing and resuming the source recovers with no repeated frames after settling.
@@ -50,6 +52,7 @@ All eight pass on the current sources (Verilator 5.052). `setup_tb` runs the rea
 
 Not covered:
 
+- The link cable on hardware. Two Pockets, a real cable and a Compete.com game have not been tried; the link is checked only in `link_tb` and `serial_tb`.
 - Playing through a game. The runs stop a few seconds after a game starts.
 - Waking from STOP in the full system. With blank console memory the BIOS never executed STOP in 3 emulated seconds, at boot or at the organizer menu with Power held for 0.1, 0.6 or 2 seconds, so in simulation the wake path rests on `io_tb` and the upstream STOP-wake logic.
 
@@ -57,8 +60,8 @@ Not covered:
 
 Quartus Prime Lite 18.1.0 Build 625, device 5CEBA4F23C8. Resource use is in the [resource audit](RESOURCE_AUDIT.md).
 
-- All 80 constrained timing groups pass across the four voltage and temperature models. Minimum slack: setup 0.540 ns, hold 0.116 ns, recovery 29.514 ns, removal 0.303 ns, pulse width 0.833 ns.
-- The four mailbox net-delay bounds pass: ROM request address 2.382 ns of 5 ns, audio sample 1.523 ns of 5 ns, ROM data 2.670 ns of 20 ns, boot date and time 3.070 ns of 20 ns.
-- Quartus's metastability report finds 133 synchronizer chains and a worst-case design MTBF of at least 1e9 years, with 11.3 ns worst available settling time. It could not calculate an MTBF for about a third of the chains.
-- There are no illegal or unconstrained clocks. The APF bridge, scaler and audio interfaces and some memory hold paths have no external I/O constraints, so passing these checks is not board-level timing sign-off.
+- All 80 constrained timing groups pass across the four voltage and temperature models. Minimum slack: setup 0.467 ns, hold 0.099 ns, recovery 29.688 ns, removal 0.223 ns, pulse width 0.833 ns.
+- The four mailbox net-delay bounds pass: ROM request address 3.494 ns of 5 ns, audio sample 1.480 ns of 5 ns, ROM data 2.927 ns of 20 ns, boot date and time 2.685 ns of 20 ns.
+- Quartus's metastability report finds 135 synchronizer chains, including the link port's SI input and its status bit, and a worst-case design MTBF of at least 1e9 years, with 9.8 ns worst available settling time. It could not calculate an MTBF for about a third of the chains.
+- There are no illegal or unconstrained clocks. The link port pins are false paths. The APF bridge, scaler and audio interfaces and some memory hold paths have no external I/O constraints, so passing these checks is not board-level timing sign-off.
 - The release zip contains only `Assets/gamecom/common/`, `Cores/jakesjews.GameCom/` and `Platforms/`. Nothing is placed at the SD card root.

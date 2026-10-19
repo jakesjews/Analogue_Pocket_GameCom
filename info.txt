@@ -4,3 +4,4 @@ Needs the 256 KB external BIOS at Assets/gamecom/common/boot.rom.
 L + D-pad: move touch cursor; R or L + A: touch.
 Start: Pause. Select: Game.com Menu.
 When the Game.com is off, press A, B, X, Y or Start to turn it on.
+Link two Pockets with a Game Boy link cable for Compete.com two-player games.

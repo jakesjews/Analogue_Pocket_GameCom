@@ -35,11 +35,15 @@ To bring a save over from MiSTer, copy its `boot1.vhd` to `Saves/gamecom/common/
 
 The Pocket's Core Settings menu has the screen palette, the Game.com's Power and Sound buttons, a cold reset, and loading or ejecting a second cartridge.
 
+## Link cable
+
+The link port carries the Game.com's serial port, so two Pockets running this core can be joined for Compete.com two-player games. Connect them with a Game Boy Color or Game Boy Advance link cable, start the same game on both, and use the game's own link or two-player option. The cable stands in for the Compete.com cable, including its handshake lines, so nothing needs to be set up. A Pocket cannot link to a real Game.com. So far this has been checked only in simulation, not with two Pockets and a cable.
+
 ## Good to know
 
 - **All games share one save, as on the real console, and loading a Memory restores it too.** An old Memory puts every game's saves back to the moment it was made.
 - `boot.rom` must be the 256 KB external BIOS. The 4 KB internal BIOS does not work in its place.
-- Sleep, cheats and the Game.com's modem and link features are not supported.
+- Sleep, cheats and the Game.com's modem are not supported.
 
 ## Troubleshooting
 

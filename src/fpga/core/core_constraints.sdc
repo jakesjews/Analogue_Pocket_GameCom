@@ -30,6 +30,11 @@ if {$::quartus(nameofexecutable) eq "quartus_fit"} {
     set_min_delay 0.300 -from [get_registers {*|u_gp_store|wdata_a_q* *|u_gp_store|wdata_b_q* *|u_gp_store|wren_a_q* *|u_gp_store|wren_b_q* *|u_gp_store|addr_a_q* *|u_gp_store|addr_b_q*}]
 }
 
+# Link port. SO is driven straight from a 20 MHz register and SI feeds a
+# two-flop synchronizer; the other Pocket's clock has no relationship to ours.
+set_false_path -to [get_ports {port_tran_so}]
+set_false_path -from [get_ports {port_tran_si}]
+
 # Bundled-data mailboxes across the asynchronous groups above. Each data bus
 # is held stable while its toggle passes a two-flop synchronizer, which adds
 # at least one destination clock. The clock groups cut path analysis for these
