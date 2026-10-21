@@ -18,6 +18,14 @@ bash sim/run.sh boot_tb +BIOS=/absolute/path/boot.rom +CART=/absolute/path/game.
 
 What each bench covers is in the [validation record](VALIDATION.md).
 
+The ROM-specific handshake regression runs Mortal Kombat Trilogy's actual character-selection routine on both CPUs, with the port and stack state initialized for that routine:
+
+```sh
+bash sim/run.sh serial_tb '+MKT_ROM=/absolute/path/Mortal Kombat Trilogy (USA).tgc'
+```
+
+Simulations default to one worker thread; `SIM_THREADS` overrides it. Two workers made the two-Pocket test slower on this Mac because its clocks require frequent synchronization.
+
 `boot_tb` runs the whole Pocket wrapper with a real BIOS and cartridge. Its options:
 
 - `+SAVE=file` loads an 8 KB console save.
@@ -29,6 +37,13 @@ What each bench covers is in the [validation record](VALIDATION.md).
 - `+TRACE=file` lists every cartridge access as a halfword address.
 
 It prints the share of CPU cycles spent waiting for cartridge ROM. With blank console memory the BIOS needs about nine emulated seconds to reach its menu, so game tests are built from checkpoints.
+
+`link_game_tb` runs two whole Pockets joined by a link cable, both resumed from one checkpoint, and follows a script of timed button presses, screenshots and cable changes. It prints every byte either UART sends or receives and every link and handshake change. The options and script format are at the top of `sim/link_game_tb.sv`.
+
+```sh
+bash sim/run.sh link_game_tb +BIOS=/absolute/path/boot.rom +CART=/absolute/path/game.tgc \
+    +STATE_IN=/absolute/path/checkpoint +SCRIPT=/absolute/path/script.txt
+```
 
 ## Build and package
 

@@ -1,6 +1,6 @@
 # FPGA resource use
 
-The fit uses 16,778 of 18,480 ALMs (91%), 5,825 flip-flops, 169 of 308 M10K blocks and 1,320,960 block-RAM bits. No memory is built from MLABs or logic cells.
+The 0.3.3 fit uses 16,809 of 18,480 ALMs (91%), 5,837 flip-flops, 169 of 308 M10K blocks and 1,320,960 block-RAM bits. No memory is built from MLABs or logic cells.
 
 ## Block RAM
 
@@ -35,4 +35,4 @@ The sound tables and the general-register shadow also provide parallel access in
 
 ## Logic
 
-Most of the logic is the CPU: its own hierarchy, excluding child modules, uses 14,200 ALMs and 2,923 registers. The pressure is combinational decode, multiplexing and execution logic, not memory expanded into registers.
+Most of the logic is the CPU: its own hierarchy, excluding child modules, uses about 14,225 ALMs and 2,923 registers. The pressure is combinational decode, multiplexing and execution logic, not memory expanded into registers.

@@ -104,16 +104,20 @@ A Memory is a 26,912-byte blob: a 32-byte versioned header, 8 KB console RAM, 25
 
 ## Link cable
 
-The Game.com's serial port is the SM8521 UART (TXD and RXD) plus four handshake lines on port 3: DTR on P3.0 and RTS on P3.1 as outputs, CTS on P3.2 and DSR on P3.3 as inputs. The Compete.com cable was a null modem that crossed all three pairs, so a game may use the handshakes, not only the data lines. A Game Boy link cable crosses only SO and SI, with SCK and SD straight through and no pull-ups to rely on, so `pocket_link` carries all three outputs on SO as a continuous stream of 8-bit frames at 2 Mbps and decodes the partner's stream from SI:
+`core.json` sets `link_port` to `true` and `cartridge_adapter` to `0`. The [link port shares the cartridge power rail](https://www.analogue.co/developer/docs/openfpga/external-hardware), and [`cartridge_adapter: -1` switches that rail off](https://www.analogue.co/developer/docs/openfpga/core-definition-files/core-json), even when `link_port` is true. Zero enables power without offering Play Cartridge or requiring an adapter. The unused cartridge pins retain the template's inactive settings. The packager checks this configuration because RTL simulation does not model the host-controlled power rail.
+
+The Game.com's serial port is the SM8521 UART (TXD and RXD) plus four handshake lines on port 3. The upstream RTL names P3.0 DTR, P3.1 RTS, P3.2 CTS and P3.3 DSR. Compete.com connects P3.0 to the peer's P3.2 and P3.1 to the peer's P3.3, so those signal names pair DTR with CTS and RTS with DSR. Mortal Kombat Trilogy's character-selection routine at CPU 714Eh raises P3.0 and waits for P3.2; the previous RTS-to-CTS mapping left both games waiting even though their UART search had succeeded. A Game Boy link cable crosses only SO and SI, with SCK and SD straight through and no pull-ups to rely on, so `pocket_link` carries all three outputs on SO as a continuous stream of 8-bit frames at 500 kbps and decodes the partner's stream from SI:
 
 ```
 start 0 | TXD | RTS | DTR | even parity | stop 1 | idle 1 | idle 1
 ```
 
-- A frame takes 4 µs. A serial edge reaches the other Game.com between about 3 and 7 µs late, and the 4 µs of jitter is inside the half bit that the SM8521 receiver tolerates at its fastest rate, 78,125 baud with 12.8 µs bits.
+- A frame takes 16 µs, so a serial edge reaches the other Game.com between about 11 and 27 µs late. The Compete.com games set the UART through the BIOS, whose fastest link setting gives 89.6 µs bits (11,161 baud) in this core, so the 16 µs of jitter stays well inside the half bit that the SM8521 receiver tolerates.
+- 2 µs bits are about as long as a Game Boy Color's fastest link clock, which leaves room for slow or ringing edges through the Pocket's link port and the cable. SI is also filtered before the receiver sees it: it changes only after three equal samples at 20 MHz.
 - The receiver accepts a start edge only after at least 2.5 bit times of high line. A real start always follows the stop and two idle bits, while no edge inside a frame follows more than two high bits, so the receiver cannot lock onto the wrong edge. A frame counts only if its start, parity and stop bits check.
-- Eight good frames in a row connect the link; 16 frame periods (64 µs) without one disconnect it. While disconnected, RXD, CTS and DSR read high, as on a console with nothing plugged in. Noise on an unplugged port, or a Game Boy core's serial traffic, is not accepted as a partner.
+- Eight good frames in a row connect the link; 16 frame periods (256 µs) without one disconnect it. While disconnected, RXD, CTS and DSR read high, as on a console with nothing plugged in. Noise on an unplugged port, or a Game Boy core's serial traffic, is not accepted as a partner.
 - SO is driven straight from a 20 MHz register and SI goes through a two-flop synchronizer. The transmitter keeps running through reset, so a partner that is loading or paused still looks connected. SCK and SD stay inputs, and `core.json` declares the link port in use.
+- A Game Boy Advance cable, or Analogue's link cable in its GBA setting, grounds SI at one end, so data crosses in one direction only and that side never links.
 - The frame format is specific to this core: a Pocket links only to another Pocket running it, not to a real Game.com or to MiSTer.
 
 ## Clock and power

@@ -37,7 +37,9 @@ The Pocket's Core Settings menu has the screen palette, the Game.com's Power and
 
 ## Link cable
 
-The link port carries the Game.com's serial port, so two Pockets running this core can be joined for Compete.com two-player games. Connect them with a Game Boy Color or Game Boy Advance link cable, start the same game on both, and use the game's own link or two-player option. The cable stands in for the Compete.com cable, including its handshake lines, so nothing needs to be set up. A Pocket cannot link to a real Game.com. So far this has been checked only in simulation, not with two Pockets and a cable.
+Use version 0.3.3 or later on both Pockets. Mortal Kombat Trilogy two-player mode has been confirmed working on two Pockets with Analogue's link cable in GB/C mode. This version fixes link-port power and the handshake wiring used after the initial connection.
+
+The link port carries the Game.com's serial port for Compete.com two-player games. Connect two Pockets with a Game Boy Color link cable, start the same game on both, and use the game's own link or two-player option. On Analogue's link cable, set the switch to GB/C; a Game Boy Advance cable, or the GBA setting, carries data only one way and does not work. The cable stands in for the Compete.com cable, including its handshake lines, so nothing needs to be set up. A Pocket cannot link to a real Game.com.
 
 ## Good to know
 

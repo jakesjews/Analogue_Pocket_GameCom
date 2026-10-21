@@ -29,7 +29,8 @@ module boot_tb;
     pocket_gamecom dut(.*,.rtc_date(32'h20260909),.rtc_time(32'h03131500),
         .rtc_valid(1'b1),.in_menu(1'b0),.grayscale(1'b0),.cram_a(a),.cram_dq(dq),.cram_wait(1'b0),
         .cram_clk(cclk),.cram_adv_n(adv),.cram_cre(cre),.cram_ce0_n(ce0),
-        .cram_ce1_n(ce1),.cram_oe_n(oe),.cram_we_n(we),.cram_ub_n(ub),.cram_lb_n(lb));
+        .cram_ce1_n(ce1),.cram_oe_n(oe),.cram_we_n(we),.cram_ub_n(ub),.cram_lb_n(lb),
+        .link_so(),.link_si(1'b1));
     psram_model ram(clk_bridge,a,dq,adv,ce0,ce1,oe,we,ub,lb);
     task load_file(input string filename,input [15:0] id,input [31:0] base);
         integer f,size,n,r;reg[7:0] bytes[0:2097151];

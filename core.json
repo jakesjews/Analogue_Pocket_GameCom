@@ -9,8 +9,8 @@
       "description": "Tiger Game.com. MiSTer core by Kitrinx; Pocket port.",
       "author": "jakesjews",
       "url": "https://github.com/jakesjews/Analogue_Pocket_GameCom",
-      "version": "0.3.0",
-      "date_release": "2026-10-18"
+      "version": "0.3.3",
+      "date_release": "2026-10-21"
     },
     "framework": {
       "target_product": "Analogue Pocket",
@@ -22,7 +22,7 @@
       },
       "hardware": {
         "link_port": true,
-        "cartridge_adapter": -1
+        "cartridge_adapter": 0
       }
     },
     "cores": [

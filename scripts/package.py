@@ -25,7 +25,13 @@ def source_digest():
 
 
 def package():
-    metadata = json.loads((ROOT / "core.json").read_text())["core"]["metadata"]
+    core = json.loads((ROOT / "core.json").read_text())["core"]
+    metadata = core["metadata"]
+    # The link level translators share the cartridge power rail. This core
+    # only loads ROM files, so keep that rail on without a Play Cartridge mode.
+    hardware = core["framework"]["hardware"]
+    if hardware["link_port"] and hardware["cartridge_adapter"] != 0:
+        raise SystemExit("Link port requires cartridge_adapter = 0 to power the shared cartridge/link rail")
     # Pocket derives the core's load path from these fields, even if its menu
     # discovered core.json under a different folder. Catch that before shipping.
     for field in ("author", "shortname"):
